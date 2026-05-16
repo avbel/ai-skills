@@ -195,22 +195,27 @@ use tokio_stream::wrappers::ReceiverStream;
 
 type ResponseStream = ReceiverStream<Result<HelloReply, tonic::Status>>;
 
-async fn lots_of_replies(
-    &self,
-    request: tonic::Request<HelloRequest>,
-) -> Result<tonic::Response<ResponseStream>, tonic::Status> {
-    let name = request.into_inner().name;
-    let (tx, rx) = tokio::sync::mpsc::channel(8);
+#[tonic::async_trait]
+impl Greeter for GreeterService {
+    type LotsOfRepliesStream = ResponseStream;
 
-    tokio::spawn(async move {
-        let _ = tx
-            .send(Ok(HelloReply {
-                message: format!("Hello {name}!"),
-            }))
-            .await;
-    });
+    async fn lots_of_replies(
+        &self,
+        request: tonic::Request<HelloRequest>,
+    ) -> Result<tonic::Response<Self::LotsOfRepliesStream>, tonic::Status> {
+        let name = request.into_inner().name;
+        let (tx, rx) = tokio::sync::mpsc::channel(8);
 
-    Ok(tonic::Response::new(ReceiverStream::new(rx)))
+        tokio::spawn(async move {
+            let _ = tx
+                .send(Ok(HelloReply {
+                    message: format!("Hello {name}!"),
+                }))
+                .await;
+        });
+
+        Ok(tonic::Response::new(ReceiverStream::new(rx)))
+    }
 }
 ```
 

@@ -97,10 +97,22 @@ npx tsx --import ./instrumentation.ts ./src/server.ts
 node --require ./instrumentation.js ./dist/server.js
 ```
 
-For ESM apps where instrumentation hooks need loader support, use the OTel hook before the app entrypoint:
+For ESM apps, always use `--import` with an `.mjs` bootstrap that calls `register()` from `node:module`. Do not combine `--experimental-loader` with `--require` — loader hooks apply only to ESM, and `--require` only runs CommonJS, so the two cannot share a single bootstrap file:
 
 ```bash
-node --experimental-loader=@opentelemetry/instrumentation/hook.mjs --require ./instrumentation.js ./dist/server.js
+node --import ./instrumentation.mjs ./dist/server.js
+```
+
+```js
+// instrumentation.mjs
+import { register } from 'node:module'
+import { NodeSDK } from '@opentelemetry/sdk-node'
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node'
+
+register('@opentelemetry/instrumentation/hook.mjs', import.meta.url)
+
+const sdk = new NodeSDK({ instrumentations: [getNodeAutoInstrumentations()] })
+sdk.start()
 ```
 
 Do not import the app from inside the instrumentation file unless the project already uses that pattern. It is easier to verify startup order when the runtime preloads instrumentation.

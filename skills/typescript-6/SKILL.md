@@ -30,7 +30,7 @@ If a project breaks on upgrade, the cause is almost always one of these defaults
 - **Regression risk:** code that accidentally got correct types via *deferred* inference may now infer earlier with less context. Symptom: a generic param resolves to a narrower or wider type than before. Fix by adding an explicit type argument at the call site.
 
 ### `#/` subpath imports
-- Node.js supports `imports` map entries whose key is `#/...` (a leading hash + slash). TypeScript now resolves these under `module: "node20" | "nodenext" | "bundler"`.
+- Node.js supports `imports` map entries whose key is `#/...` (a leading hash + slash). TypeScript now resolves these under `moduleResolution: "node16" | "nodenext" | "bundler"`.
   ```jsonc
   // package.json
   { "type": "module", "imports": { "#/utils/": "./src/utils/" } }
@@ -110,7 +110,7 @@ A 6.0 build emits these as deprecation diagnostics. Fix them now — they will f
 - [ ] If your tsconfig was implicit, set the **old** defaults explicitly first (`strict: false`, `module: "commonjs"`, `target: "es2020"`, `types`-list, `rootDir`) so the upgrade is a no-op, then flip flags one at a time.
 - [ ] Grep for `assert { type:` in dynamic `import(...)` — rewrite as `with { type: ... }`.
 - [ ] Replace `baseUrl` with either `paths` or `#/` subpath imports.
-- [ ] Replace `moduleResolution: "node"` / `"node10"` — pick `bundler`, `node20`, or `nodenext`.
+- [ ] Replace `moduleResolution: "node"` / `"node10"` — pick `bundler`, `node16`, or `nodenext`.
 - [ ] Remove `--downlevelIteration` from scripts and `tsconfig`.
 - [ ] If you ship `target: "es5"`, choose `es2020`+; rely on engine support, not transpilation.
 - [ ] Once green, run `tsc --stableTypeOrdering` and update any `.d.ts` golden files / Cypress/Vitest type snapshots ahead of the 7.0 jump.

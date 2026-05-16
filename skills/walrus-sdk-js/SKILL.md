@@ -44,6 +44,18 @@ export const client = new SuiGrpcClient({
 }).$extend(walrus());
 ```
 
+For projects that already use GraphQL or legacy JSON-RPC, the extension pattern works on those clients too — swap the constructor and keep the `.$extend(walrus())` call:
+
+```ts
+import { SuiGraphQLClient } from '@mysten/sui/graphql';
+import { walrus } from '@mysten/walrus';
+
+export const client = new SuiGraphQLClient({
+  url: 'https://sui-testnet.mystenlabs.com/graphql',
+  network: 'testnet',
+}).$extend(walrus());
+```
+
 Migration note: old code that creates `new WalrusClient({ suiRpcUrl, network })` should be migrated to the extension pattern. `WalrusClient.experimental_asClientExtension()` was removed.
 
 ## WalrusFile Reads
@@ -153,16 +165,18 @@ const registerTx = flow.register({
   deletable: true,
 });
 
-const registerResult = await signAndExecuteTransaction({
+const { digest } = await signAndExecuteTransaction({
   transaction: registerTx,
 });
 
-if (registerResult.$kind === 'FailedTransaction') {
-  throw new Error(`Registration failed: ${registerResult.FailedTransaction.status.error?.message}`);
+// Wallet-standard output only returns a digest. Wait for finality and inspect effects:
+const executed = await client.core.waitForTransaction({ digest });
+if (executed.transaction.effects?.status?.error) {
+  throw new Error(`Registration failed: ${executed.transaction.effects.status.error}`);
 }
 ```
 
-Continue with the flow's upload and certify steps according to the current project wallet API. Always check transaction status after wallet signing.
+The `$kind === 'FailedTransaction'` discriminated-union shape is only produced by `client.core.executeTransaction(...)` — wallet-standard `signAndExecuteTransaction` returns just `{ digest }`, so always re-fetch via `waitForTransaction` to check status. Continue with the flow's upload and certify steps according to the current project wallet API.
 
 ## Resumable Uploads
 
