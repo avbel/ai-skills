@@ -82,7 +82,20 @@ Apply these conventions when working with postgres.js (`postgres` package from `
 - For simple cases where type inference works, `WHERE id = ANY(${ids})` with a plain array also works — use `sql.array()` when you need explicit type control.
 
 ## JSONB
-- **Inserting JSON:** Use `sql.json(value)` to explicitly serialize a JavaScript object as a JSONB parameter: `` sql`insert into events ${sql({ type: 'click', data: sql.json({ x: 10, y: 20 }) })}` ``.
+- **Inserting JSON (MANDATORY pattern):** Always use `sql.json(value)` to send a JavaScript object to a `jsonb` column. postgres.js handles the wire-format serialization; no manual stringify, no cast required.
+  ```js
+  // CORRECT
+  await sql`insert into events (type, payload) values (${type}, ${sql.json(payload)})`
+
+  // CORRECT — dynamic insert/update with jsonb fields
+  await sql`insert into events ${sql({ type, payload: sql.json(payload) }, 'type', 'payload')}`
+  ```
+- **Anti-pattern — NEVER do this:** `JSON.stringify(obj)` combined with an explicit `::jsonb` cast. It bypasses postgres.js's typed parameter handling, breaks when the object contains values postgres.js would normally serialize (Dates, Buffers, custom types), and produces double-encoded strings in some edge cases.
+  ```js
+  // WRONG — do not use
+  await sql`insert into events (payload) values (${JSON.stringify(payload)}::jsonb)`
+  ```
+  If a legacy query uses this form, migrate it to `${sql.json(payload)}` (no cast needed).
 - **Dynamic JSONB columns in inserts/updates:** When a column is `jsonb`, wrap the value with `sql.json()` so postgres.js sends it as JSON rather than `[object Object]`.
 - **Merging JSONB fields:** Use PostgreSQL's `||` operator with `COALESCE` to safely merge into a possibly-null column:
   ```js

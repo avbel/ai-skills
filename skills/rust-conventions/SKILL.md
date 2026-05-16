@@ -1,6 +1,6 @@
 ---
 name: rust-conventions
-description: Rust 2024+ conventions for naming, ownership, structs, enums, error handling, traits, lifetimes, modules, iterators, smart pointers, concurrency, and tests. Use when writing or modifying Rust source files or Cargo.toml.
+description: Rust 2024+ conventions for naming, ownership, error handling, traits, modules, iterators, concurrency, tests, and Clippy lint policy. Use when writing or modifying Rust source files, Cargo.toml, or Clippy configuration.
 ---
 
 # Rust Conventions
@@ -11,6 +11,24 @@ Apply these conventions in Rust projects. These rules are written for any coding
 
 - Use Rust edition 2024 or later when the project allows it.
 - After Rust code changes, run `cargo fmt` and `cargo clippy` when available and appropriate for the repository.
+- When introducing or tightening lint policy, prefer Cargo-level Clippy lint groups over ad hoc command-only flags so CI, IDEs, and local runs share one policy.
+
+## Clippy Lint Policy
+
+For strict Rust projects, add lint groups in `Cargo.toml` using Cargo's `[lints.clippy]` table:
+
+```toml
+[lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+```
+
+- Use `pedantic = "deny"` to make high-signal Clippy style and correctness lints part of the build contract.
+- Use `nursery = "warn"` because nursery lints are useful but can be newer, noisier, or more likely to change.
+- Keep `priority = -1` on lint groups so project-specific lint exceptions can override individual lints with the default priority.
+- Prefer targeted lint exceptions in `Cargo.toml` for crate-wide policy and `#[allow(clippy::lint_name)]` only for narrow, justified local cases.
+- If a project already has `[workspace.lints.clippy]`, put the policy there and opt crates into it with `[lints] workspace = true`.
+- After changing lint policy, run `cargo clippy --all-targets --all-features` unless the repository documents a narrower command.
 
 ## Naming
 
@@ -86,9 +104,16 @@ Apply these conventions in Rust projects. These rules are written for any coding
 - Use `Box<T>` for recursive types or large data with single ownership.
 - Use `Rc<T>` for single-threaded shared ownership.
 - Use `Arc<T>` for thread-safe shared ownership.
-- Pair `Arc<T>` with `Mutex<T>` for shared mutable state when message passing is not a better fit.
+- Pair `Arc<T>` with the right synchronization primitive for shared mutable state when message passing is not a better fit.
 - Prefer message passing with channels over shared mutable state when threads do not need direct access to the same data.
 - Types must implement `Send` to transfer ownership between threads and `Sync` for shared references across threads.
+- Before choosing a lock type, double-check whether the guarded code runs in synchronous threads, async tasks, or both.
+- Do not mix synchronization families casually. If a module already uses `std::sync::Mutex`, `parking_lot::Mutex`, `tokio::sync::Mutex`, `RwLock`, `Semaphore`, or channels for a shared resource, follow that design unless there is a clear reason to change it.
+- Use `std::sync::Mutex` or `parking_lot::Mutex` for short, non-async critical sections where the lock guard is never held across `.await`.
+- Use `tokio::sync::Mutex` only when async code must hold the guard across `.await` or must coordinate fairly between Tokio tasks.
+- Do not hold a blocking mutex guard across `.await`; restructure the code, clone/move the needed data out, or switch to an async-aware primitive.
+- For read-heavy shared state, consider `RwLock`; for bounded concurrency, consider `Semaphore`; for ownership transfer or work distribution, use channels.
+- Keep lock acquisition order consistent across the crate and document it when multiple locks may be held together.
 
 ## Testing
 
@@ -97,4 +122,3 @@ Apply these conventions in Rust projects. These rules are written for any coding
 - Add custom assertion messages when they clarify intent.
 - Use `#[should_panic(expected = "substring")]` to verify specific panic messages.
 - Use `Result<(), E>` return type in tests when it simplifies `?`-based setup.
-
