@@ -84,6 +84,20 @@ Skills are loaded on-demand — only the skill name and description are loaded a
 - Include a cleanup trap for temp files
 - Reference the script path as `/mnt/skills/user/{skill-name}/scripts/{script}.sh`
 
+### Keeping README in Sync
+
+**After adding any new skill, update `README.md`.**
+
+Find the correct ecosystem section (Rust, TypeScript / JavaScript, Sui / Move) and add one row to the table:
+
+```markdown
+| `{skill-name}` | Brief description of what the skill covers |
+```
+
+The description must come from the `description:` field in `SKILL.md` — trim it to ≤ 10 words. If no existing section fits, add a new `###` heading above the row.
+
+Do not reorder or reformat other rows when inserting.
+
 ### End-User Installation
 
 Document these two installation methods for users:
