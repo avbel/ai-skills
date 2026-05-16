@@ -16,7 +16,6 @@ skills/
     SKILL.md              # Required: skill definition
     scripts/              # Required: executable scripts
       {script-name}.sh    # Bash scripts (preferred)
-  {skill-name}.zip        # Required: packaged for distribution
 ```
 
 ### Naming Conventions
@@ -24,7 +23,6 @@ skills/
 - **Skill directory**: `kebab-case` (e.g., `vercel-deploy`, `log-monitor`)
 - **SKILL.md**: Always uppercase, always this exact filename
 - **Scripts**: `kebab-case.sh` (e.g., `deploy.sh`, `fetch-logs.sh`)
-- **Zip file**: Must match directory name exactly: `{skill-name}.zip`
 
 ### SKILL.md Format
 
@@ -85,15 +83,6 @@ Skills are loaded on-demand — only the skill name and description are loaded a
 - Write machine-readable output (JSON) to stdout
 - Include a cleanup trap for temp files
 - Reference the script path as `/mnt/skills/user/{skill-name}/scripts/{script}.sh`
-
-### Creating the Zip Package
-
-After creating or updating a skill:
-
-```bash
-cd skills
-zip -r {skill-name}.zip {skill-name}/
-```
 
 ### End-User Installation
 
