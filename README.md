@@ -10,28 +10,28 @@ Install one skill into your Claude Code skills directory:
 
 ```bash
 # pnpm
-pnpm dlx skills add vitest-js
+pnpm dlx skills add avbel/ai-skills -s vitest-js
 
 # npm
-npx skills add vitest-js
+npx skills add avbel/ai-skills -s vitest-js
 ```
 
 Install multiple skills at once:
 
 ```bash
-pnpm dlx skills add rust-conventions anyhow-rust tokio axum-rust
+pnpm dlx skills add avbel/ai-skills -s rust-conventions -s anyhow-rust -s tokio -s axum-rust
 ```
 
-Install all skills:
+Install all skills from this repo:
 
 ```bash
-pnpm dlx skills add --all
+pnpm dlx skills add avbel/ai-skills --all
 ```
 
 List available skills:
 
 ```bash
-pnpm dlx skills list
+pnpm dlx skills list avbel/ai-skills
 ```
 
 The installer auto-detects your agent and copies files to the right location. Pass `--agent` to override.
@@ -48,20 +48,20 @@ The installer auto-detects your agent and copies files to the right location. Pa
 
 ```bash
 # install for Cursor
-pnpm dlx skills add vitest-js --agent cursor
+pnpm dlx skills add avbel/ai-skills -s vitest-js --agent cursor
 
 # install for GitHub Copilot
-pnpm dlx skills add vitest-js --agent copilot
+pnpm dlx skills add avbel/ai-skills -s vitest-js --agent copilot
 ```
 
 #### Custom destination
 
 ```bash
 # Install to a project-local .claude/skills directory
-pnpm dlx skills add vitest-js --dest .claude/skills
+pnpm dlx skills add avbel/ai-skills -s vitest-js --dest .claude/skills
 
 # Install to claude.ai project knowledge export directory
-pnpm dlx skills add vitest-js --dest ./export
+pnpm dlx skills add avbel/ai-skills -s vitest-js --dest ./export
 ```
 
 ---
