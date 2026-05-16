@@ -7,6 +7,8 @@ description: Rust 2024+ conventions for naming, ownership, error handling, trait
 
 Apply these conventions in Rust projects. These rules are written for any coding agent, including Claude Code, Codex, Cursor, and Copilot.
 
+When driving an LLM to produce Rust that follows these conventions, also apply [`power-rust`](../power-rust/SKILL.md) — prompt patterns (crate version pinning, cancel-safety annotation, `// SAFETY:` invariants, lifetime call-site examples, multi-design trait proposals) that statistically reduce LLM Rust bugs.
+
 ## General
 
 - Use Rust edition 2024 or later when the project allows it.
