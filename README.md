@@ -102,6 +102,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `rust-async-conventions` | Futures, Send/Sync, join/select, streams, pinning, cancellation |
 | `rust-wasm-conventions` | wasm-bindgen, wasm-pack, JS interop, binary size |
 | `design-patterns-rust` | Builder, Factory, Singleton, Newtype, Strategy, State, RAII |
+| `power-rust` | Prompt patterns that reduce LLM Rust bugs (versions, cancel-safety, SAFETY) |
 | `anyhow-rust` | `anyhow::Error`, `bail!`/`ensure!`, error chaining, backtraces |
 | `axum-rust` | Router, handlers, extractors, State, tower middleware |
 | `clap-rust` | Derive Parser, subcommands, env/default, shell completions |
