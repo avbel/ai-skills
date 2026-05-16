@@ -98,6 +98,23 @@ The description must come from the `description:` field in `SKILL.md` — trim i
 
 Do not reorder or reformat other rows when inserting.
 
+### Cross-Agent Validation
+
+**Before merging a new skill, have a second AI coding agent review it.**
+
+Skills are prescriptive, so a flawed `SKILL.md` spreads bad practice across every project that installs it. The agent that drafted the skill shares context blind spots with its author; a second agent from a different vendor catches issues the original drafter cannot.
+
+After committing the `SKILL.md` and the README row, request a review of the new skill from one of:
+
+- Claude Code (`claude`)
+- Codex (`codex`)
+- opencode (`opencode`)
+- Gemini CLI (`gemini`)
+
+The review should answer: is the skill accurate, is it actionable, are the prescriptions justified, does it conflict with existing skills in the same ecosystem? Address the feedback or document why it was rejected, then merge.
+
+If you are an AI agent without access to peer agents, surface the request to the user and pause before merging.
+
 ### End-User Installation
 
 Document these two installation methods for users:
