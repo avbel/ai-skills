@@ -101,13 +101,20 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `anyhow-rust` | `anyhow::Error`, `bail!`/`ensure!`, error chaining, backtraces |
 | `axum-rust` | Router, handlers, extractors, State, tower middleware |
 | `clap-rust` | Derive Parser, subcommands, env/default, shell completions |
+| `dotenvy-rust` | `.env` loading, override modes, iteration, env-specific config |
+| `eyre-rust` | `Report`, `WrapErr`, custom handlers, `eyre!`, anyhow migration |
+| `futures-util-rust` | `StreamExt`, `FutureExt`, `TryStreamExt`, `select!`, `join`, sinks |
 | `moka-rust` | `sync::Cache`, `future::Cache`, TTL/TTI, eviction, weighted |
 | `otel-rust-observable-handles` | Observable instruments, keep-alive pattern, sdk 0.27+ |
 | `opentelemetry-rust` | Traces, metrics, logs, OTLP, propagation, sampling |
 | `reqwest-rust` | Async client, TLS, JSON/multipart, streaming, retries |
+| `tempfile-rust` | `NamedTempFile`, `TempDir`, `SpooledTempFile`, `Builder`, persist |
 | `tokio-rust` | Runtime, channels, sync primitives, async I/O, `select!`, shutdown |
+| `tokio-stream-rust` | `StreamExt`, `ReceiverStream`, `StreamMap`, timeout, throttle |
 | `tonic-rust` | gRPC, protobuf codegen, streaming, interceptors, health checks |
 | `tower-rust` | `Service`, `Layer`, timeouts, buffers, rate limits, retries |
+| `tracing-rust` | Spans, events, `#[instrument]`, subscriber, layers, structured logging |
+| `walkdir-rust` | Recursive directory walk, `DirEntry`, `filter_entry`, depth control |
 
 ### Rust — language & patterns
 
