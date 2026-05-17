@@ -149,6 +149,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `typescript-6` | TS 6.0 new defaults, `Temporal`, upsert, subpath imports |
 | `nodejs-26` | Temporal, V8 14.6, Undici 8, ffi, removals |
 | `design-patterns-ts` | GoF patterns with idiomatic TypeScript |
+| `manual-testing-node-js` | Env setup, docker DB + migrations, SUI contracts, plan + execute |
 
 ### Sui / Move
 
