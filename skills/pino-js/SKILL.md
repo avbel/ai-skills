@@ -1,5 +1,5 @@
 ---
-name: pino
+name: pino-js
 description: Pino logger conventions — log levels, child loggers, serializers, redaction, transports, destinations, formatters, and web framework integration. Use when writing or modifying logging code that imports 'pino' in js (node.js, bun) projects.
 ---
 

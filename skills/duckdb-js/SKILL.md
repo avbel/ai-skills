@@ -1,5 +1,5 @@
 ---
-name: duckdb
+name: duckdb-js
 description: DuckDB conventions — SQL syntax, data types, complex types (LIST/STRUCT/MAP), aggregate functions, window functions, lambda expressions, file I/O (Parquet/CSV/JSON), COPY, ATTACH, Node.js client, and DuckDB-specific SQL extensions. Use when writing queries, schemas, or code that uses DuckDB.
 ---
 

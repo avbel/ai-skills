@@ -1,5 +1,5 @@
 ---
-name: cacheable
+name: cacheable-js
 description: Cacheable (jaredwray/cacheable) conventions — L1/L2 caching with Keyv, TTL, wrap/memoize, hooks, events, stats, distributed sync, CacheableMemory, cache-manager, and storage adapters. Use when writing or modifying code that imports 'cacheable' or 'cache-manager' for caching.
 ---
 

@@ -4,151 +4,151 @@
     "anyhow-rust": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/anyhow-rust/SKILL.md",
+      "skillPath": ".agents/skills/anyhow-rust/SKILL.md",
       "computedHash": "f7511d3063e790c5c14d1844af75a3fb445372040acf3c4b9a8147a3c4f51f0e"
     },
     "cacheable": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/cacheable/SKILL.md",
+      "skillPath": ".agents/skills/cacheable/SKILL.md",
       "computedHash": "15f0ed2d9ed49a4510920d719d1ac2a920d5d8674a7366aa865c58e4ef3d0261"
     },
     "clickhouse": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/clickhouse/SKILL.md",
+      "skillPath": ".agents/skills/clickhouse/SKILL.md",
       "computedHash": "06fc1052bf6953c97ff32dc1b8d1449c7ceca3b7979367f9807aab119e3a8735"
     },
     "close-with-grace-js": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/close-with-grace-js/SKILL.md",
+      "skillPath": ".agents/skills/close-with-grace-js/SKILL.md",
       "computedHash": "ce18e7f647e1501e92949eed99704f8118f6868168844be0dfa00e48eba0873a"
     },
     "design-patterns-rust": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/design-patterns-rust/SKILL.md",
+      "skillPath": ".agents/skills/design-patterns-rust/SKILL.md",
       "computedHash": "eac5641c615d8639c8750234da69ca54e8025dada36fd595e48afe18472a864d"
     },
     "design-patterns-ts": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/design-patterns-ts/SKILL.md",
+      "skillPath": ".agents/skills/design-patterns-ts/SKILL.md",
       "computedHash": "84758350e0e9e75f1c8ee21b010b87221daae856961ed5d32ba62e01157f61d8"
     },
     "duckdb": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/duckdb/SKILL.md",
+      "skillPath": ".agents/skills/duckdb/SKILL.md",
       "computedHash": "de8aff4d0a2f018360752fa96da2377c77be942412dbb640528d7cf1ec80783b"
     },
     "fastify": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/fastify/SKILL.md",
+      "skillPath": ".agents/skills/fastify/SKILL.md",
       "computedHash": "3152b6968ad9d38dac1e2cab8294b769704905975e1a71cb067710c973daa382"
     },
     "js-conventions": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/js-conventions/SKILL.md",
+      "skillPath": ".agents/skills/js-conventions/SKILL.md",
       "computedHash": "865645f292f0a3901716e496db85820dc32af2044d6187a29b6cd33e74155603"
     },
     "move-conventions": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/move-conventions/SKILL.md",
+      "skillPath": ".agents/skills/move-conventions/SKILL.md",
       "computedHash": "9e39f1d12d4c19e82c9a065397bd0487f6b28ef6dcc4e1f103ad86789a919e18"
     },
     "nodejs-26": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/nodejs-26/SKILL.md",
+      "skillPath": ".agents/skills/nodejs-26/SKILL.md",
       "computedHash": "ca434fe23ce13035a299c6b6a2f054877a59a3ca74495fb088a9a60b16fb9e74"
     },
     "opentelemetry-js": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/opentelemetry-js/SKILL.md",
+      "skillPath": ".agents/skills/opentelemetry-js/SKILL.md",
       "computedHash": "eee0502f8ecc021caddab2b232f585c3cd30209c37d761e5fc2e8d2f41ee3084"
     },
     "otel-rust-observable-handles": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/otel-rust-observable-handles/SKILL.md",
+      "skillPath": ".agents/skills/otel-rust-observable-handles/SKILL.md",
       "computedHash": "5915d99411397d56b34b475a332ddcc8694d3646dc8134ba1e4d155a30cbf76f"
     },
     "parquet": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/parquet/SKILL.md",
+      "skillPath": ".agents/skills/parquet/SKILL.md",
       "computedHash": "0bdfae4de117ac1aa1526b650a5955ce7ac652c0b3681539d1a14626ac898253"
     },
     "pino": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/pino/SKILL.md",
+      "skillPath": ".agents/skills/pino/SKILL.md",
       "computedHash": "7fb734fe5bf7014274f05cb0c916ec4d61dedf24999a5a4f751e693551942408"
     },
     "postgres-js": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/postgres-js/SKILL.md",
+      "skillPath": ".agents/skills/postgres-js/SKILL.md",
       "computedHash": "048619978aaa3ca5b74c1ebdc8a88413277d7d3a83b4f948a2fa7eb94c470183"
     },
     "rust-async-conventions": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/rust-async-conventions/SKILL.md",
+      "skillPath": ".agents/skills/rust-async-conventions/SKILL.md",
       "computedHash": "7287a971333990f45be35ae43b4046a604be2b02dcf4ca0e12f8406c872227e7"
     },
     "rust-conventions": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/rust-conventions/SKILL.md",
+      "skillPath": ".agents/skills/rust-conventions/SKILL.md",
       "computedHash": "8261b95662785415e61b467f9ea37878ca2c44fd4acfb2debe5112849bf506aa"
     },
     "rust-wasm-conventions": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/rust-wasm-conventions/SKILL.md",
+      "skillPath": ".agents/skills/rust-wasm-conventions/SKILL.md",
       "computedHash": "8e57dea8a5aca78f12a946790d36c133db97d9bef4c75b1a115536073e2e068a"
     },
     "sui-kiosk-sdk-js": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/sui-kiosk-sdk-js/SKILL.md",
+      "skillPath": ".agents/skills/sui-kiosk-sdk-js/SKILL.md",
       "computedHash": "4c21eacc06fbabb26757b8bf6a94d75eed5956937f703cbaac31c23677f38f36"
     },
     "sui-sdk-js": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/sui-sdk-js/SKILL.md",
+      "skillPath": ".agents/skills/sui-sdk-js/SKILL.md",
       "computedHash": "9823f51dcd68b2551c67e85350c6cbc1a99a6db5befde1c7957a2a1bf7718ef7"
     },
     "tokio": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/tokio/SKILL.md",
+      "skillPath": ".agents/skills/tokio/SKILL.md",
       "computedHash": "85b2bdd9488a0605adf726afae01f558d7df6495c69df6b620a27a5283f752ff"
     },
     "typescript-6": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/typescript-6/SKILL.md",
+      "skillPath": ".agents/skills/typescript-6/SKILL.md",
       "computedHash": "94879acbea5b1251980e31ffb6f2fa2880d173fe729354eac15e1365877c522b"
     },
     "vitest-js": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/vitest-js/SKILL.md",
+      "skillPath": ".agents/skills/vitest-js/SKILL.md",
       "computedHash": "27853b33a16500639982053d024b15478325d95dac398faa4e6b5acce741b72b"
     },
     "walrus-sdk-js": {
       "source": "avbel/ai-skills",
       "sourceType": "github",
-      "skillPath": "skills/walrus-sdk-js/SKILL.md",
+      "skillPath": ".agents/skills/walrus-sdk-js/SKILL.md",
       "computedHash": "9acdf4036d18c5e26eef7c7a4f2a99d589a8cbe23ae968c8962d1217f227da9c"
     }
   }

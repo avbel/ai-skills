@@ -1,5 +1,5 @@
 ---
-name: tokio
+name: tokio-rust
 description: Tokio async runtime conventions — runtime setup, task spawning, channels (mpsc/oneshot/broadcast/watch), synchronization primitives, async I/O, select!, streams, framing, timers, graceful shutdown, and bridging sync/async. Use when writing or modifying async Rust code that uses the tokio runtime.
 ---
 

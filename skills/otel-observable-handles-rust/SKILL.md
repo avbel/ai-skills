@@ -1,5 +1,5 @@
 ---
-name: otel-rust-observable-handles
+name: otel-observable-handles-rust
 description: Use when registering OpenTelemetry observable instruments (gauge, counter, up-down counter) in Rust with opentelemetry-sdk 0.27+. Dropping the handle returned by `.build()` unregisters the instrument and causes a monotonic memory leak in the SDK pipeline. This skill enforces the keep-alive pattern.
 origin: project:sui-node-power-tools
 ---

@@ -1,5 +1,5 @@
 ---
-name: parquet
+name: parquet-js
 description: Apache Parquet format conventions — file structure, data types, encodings, compression, schema design, predicate pushdown, and Node.js/TypeScript libraries (hyparquet, parquet-wasm, DuckDB). Use when reading, writing, or designing Parquet-based data pipelines.
 ---
 

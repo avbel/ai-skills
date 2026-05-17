@@ -1,5 +1,5 @@
 ---
-name: clickhouse
+name: clickhouse-js
 description: ClickHouse database conventions — MergeTree engines, schema design, ORDER BY optimization, data types, aggregate functions with combinators, materialized views, Node.js client patterns, and query best practices. Use when writing or modifying code that queries ClickHouse or designs ClickHouse schemas.
 ---
 

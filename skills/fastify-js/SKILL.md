@@ -1,5 +1,5 @@
 ---
-name: fastify
+name: fastify-js
 description: Fastify 5 web application conventions — plugin encapsulation, route schemas, validation, hooks lifecycle, error handling, TypeScript type providers, and testing patterns. Use when writing or modifying Fastify routes, plugins, decorators, hooks, or server setup code.
 ---
 

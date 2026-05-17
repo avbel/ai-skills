@@ -110,7 +110,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `otel-rust-observable-handles` | Observable instruments, keep-alive pattern, sdk 0.27+ |
 | `opentelemetry-rust` | Traces, metrics, logs, OTLP, propagation, sampling |
 | `reqwest-rust` | Async client, TLS, JSON/multipart, streaming, retries |
-| `tokio` | Runtime, channels, sync primitives, async I/O, `select!`, shutdown |
+| `tokio-rust` | Runtime, channels, sync primitives, async I/O, `select!`, shutdown |
 | `tonic-rust` | gRPC, protobuf codegen, streaming, interceptors, health checks |
 | `tower-rust` | `Service`, `Layer`, timeouts, buffers, rate limits, retries |
 
@@ -121,16 +121,16 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `js-conventions` | Node.js 24+, pnpm, ESM, ES2024, async/await, type safety |
 | `typescript-6` | TS 6.0 new defaults, `Temporal`, upsert, subpath imports |
 | `design-patterns-ts` | GoF patterns with idiomatic TypeScript |
-| `fastify` | Fastify 5 plugins, schemas, hooks, error handling, testing |
+| `fastify-js` | Fastify 5 plugins, schemas, hooks, error handling, testing |
 | `vitest-js` | vitest.config, `vi` mocking, snapshots, coverage, browser mode |
-| `cacheable` | Keyv, L1/L2, wrap/memoize, hooks, distributed sync |
-| `clickhouse` | MergeTree, schema, aggregates, materialized views, Node client |
+| `cacheable-js` | Keyv, L1/L2, wrap/memoize, hooks, distributed sync |
+| `clickhouse-js` | MergeTree, schema, aggregates, materialized views, Node client |
 | `close-with-grace-js` | Graceful shutdown for servers, queues, workers, CLI daemons |
-| `duckdb` | SQL, complex types, window functions, Parquet/CSV I/O |
+| `duckdb-js` | SQL, complex types, window functions, Parquet/CSV I/O |
 | `nodejs-26` | Temporal, V8 14.6, Undici 8, ffi, removals |
 | `opentelemetry-js` | OTel traces, metrics, SDK, auto-instrumentation, exporters |
-| `parquet` | File structure, encodings, compression, hyparquet, DuckDB |
-| `pino` | Log levels, child loggers, redaction, transports |
+| `parquet-js` | File structure, encodings, compression, hyparquet, DuckDB |
+| `pino-js` | Log levels, child loggers, redaction, transports |
 | `postgres-js` | Tagged templates, transactions, dynamic SQL, cursors, TypeScript |
 
 ### Sui / Move
