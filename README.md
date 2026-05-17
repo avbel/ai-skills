@@ -94,15 +94,10 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 
 ## Available Skills
 
-### Rust
+### Rust — libs & tools
 
 | Skill | Covers |
 |-------|--------|
-| `rust-conventions` | Rust 2024 naming, ownership, error handling, traits, iterators, concurrency |
-| `rust-async-conventions` | Futures, Send/Sync, join/select, streams, pinning, cancellation |
-| `rust-wasm-conventions` | wasm-bindgen, wasm-pack, JS interop, binary size |
-| `design-patterns-rust` | Builder, Factory, Singleton, Newtype, Strategy, State, RAII |
-| `power-rust` | Prompt patterns that reduce LLM Rust bugs (versions, cancel-safety, SAFETY) |
 | `anyhow-rust` | `anyhow::Error`, `bail!`/`ensure!`, error chaining, backtraces |
 | `axum-rust` | Router, handlers, extractors, State, tower middleware |
 | `clap-rust` | Derive Parser, subcommands, env/default, shell completions |
@@ -114,24 +109,39 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `tonic-rust` | gRPC, protobuf codegen, streaming, interceptors, health checks |
 | `tower-rust` | `Service`, `Layer`, timeouts, buffers, rate limits, retries |
 
-### TypeScript / JavaScript
+### Rust — language & patterns
 
 | Skill | Covers |
 |-------|--------|
-| `js-conventions` | Node.js 24+, pnpm, ESM, ES2024, async/await, type safety |
-| `typescript-6` | TS 6.0 new defaults, `Temporal`, upsert, subpath imports |
-| `design-patterns-ts` | GoF patterns with idiomatic TypeScript |
+| `rust-conventions` | Rust 2024 naming, ownership, error handling, traits, iterators, concurrency |
+| `rust-async-conventions` | Futures, Send/Sync, join/select, streams, pinning, cancellation |
+| `rust-wasm-conventions` | wasm-bindgen, wasm-pack, JS interop, binary size |
+| `design-patterns-rust` | Builder, Factory, Singleton, Newtype, Strategy, State, RAII |
+| `power-rust` | Prompt patterns that reduce LLM Rust bugs (versions, cancel-safety, SAFETY) |
+
+### JavaScript / TypeScript — libs & tools
+
+| Skill | Covers |
+|-------|--------|
 | `fastify-js` | Fastify 5 plugins, schemas, hooks, error handling, testing |
 | `vitest-js` | vitest.config, `vi` mocking, snapshots, coverage, browser mode |
 | `cacheable-js` | Keyv, L1/L2, wrap/memoize, hooks, distributed sync |
 | `clickhouse-js` | MergeTree, schema, aggregates, materialized views, Node client |
 | `close-with-grace-js` | Graceful shutdown for servers, queues, workers, CLI daemons |
 | `duckdb-js` | SQL, complex types, window functions, Parquet/CSV I/O |
-| `nodejs-26` | Temporal, V8 14.6, Undici 8, ffi, removals |
 | `opentelemetry-js` | OTel traces, metrics, SDK, auto-instrumentation, exporters |
 | `parquet-js` | File structure, encodings, compression, hyparquet, DuckDB |
 | `pino-js` | Log levels, child loggers, redaction, transports |
 | `postgres-js` | Tagged templates, transactions, dynamic SQL, cursors, TypeScript |
+
+### JavaScript / TypeScript — language & patterns
+
+| Skill | Covers |
+|-------|--------|
+| `js-conventions` | Node.js 24+, pnpm, ESM, ES2024, async/await, type safety |
+| `typescript-6` | TS 6.0 new defaults, `Temporal`, upsert, subpath imports |
+| `nodejs-26` | Temporal, V8 14.6, Undici 8, ffi, removals |
+| `design-patterns-ts` | GoF patterns with idiomatic TypeScript |
 
 ### Sui / Move
 
