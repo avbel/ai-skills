@@ -156,6 +156,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 |-------|--------|
 | `move-conventions` | Aptos/Sui dialect, naming, objects, capabilities, events, OTW |
 | `sui-cli` | Network/address management, `ptb`, publish/upgrade, keytool |
+| `sui-local-dev-usdc` | Local Sui dev network, mock USDC coin, faucet, mint balances |
 | `sui-kiosk-sdk-js` | `@mysten/kiosk`, KioskTransaction, listings, royalties |
 | `sui-sdk-js` | `@mysten/sui`, transactions, keypairs, BCS, zkLogin |
 | `walrus-sdk-js` | `@mysten/walrus`, blob reads/writes, upload relay, WASM |
