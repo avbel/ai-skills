@@ -9,8 +9,6 @@ Apply these conventions when targeting Node.js 26.x (Current line, LTS in Octobe
 - V8 14.6.202.33 (from Chromium 146). All V8 14.x ECMAScript additions are available without flags.
 - Undici 8.0.2 powers `fetch`, `Request`, `Response`, `Headers`, `WebSocket`.
 - ICU 78.3, libuv 1.52.1, bundled SQLite 3.53.x (with Percentile extension), npm 11.x.
-- Build minimums: GCC 13.2, Python 3.10+, Windows 11 SDK. Power 8 (AIX) and z13 dropped.
-- Maglev mid-tier optimizer now enabled on Linux s390x.
 
 ## Temporal API (enabled by default — no flag)
 - Available as the global `Temporal`. Prefer it over `Date` for any new code that handles time zones, calendars, scheduling, durations, or financial date math.
