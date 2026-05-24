@@ -156,6 +156,8 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | Skill | Covers |
 |-------|--------|
 | `valkey` | Features, Redis differences, Rust/Node clients, Lua, patterns/antipatterns |
+| `clickhouse` | OLAP features, JSON/Variant types, async inserts, Rust/Node clients, antipatterns |
+| `rocksdb` | LSM architecture, column families, compaction, Rust/Node bindings, antipatterns |
 
 ### Sui / Move
 
