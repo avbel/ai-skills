@@ -1,21 +1,120 @@
 ---
 name: tokio-rust
-description: Tokio async runtime conventions — runtime setup, task spawning, channels (mpsc/oneshot/broadcast/watch), synchronization primitives, async I/O, select!, streams, framing, timers, graceful shutdown, and bridging sync/async. Use when writing or modifying async Rust code that uses the tokio runtime.
+description: Tokio async runtime conventions — patterns, anti-patterns, module reference, synchronization primitives, channel decision table, when NOT to use Tokio, and alternatives. Use when writing or modifying async Rust code that uses the tokio runtime.
 ---
 
+# Tokio Conventions
+
 Apply these conventions when working with Tokio in Rust projects.
+
+## Patterns ✅
+
+| Pattern | Description |
+|---|---|
+| **Bounded channels** | Always prefer `mpsc::channel(cap)` over unbounded. Backpressure prevents OOM. |
+| **`std::sync::Mutex` for sync-only locks** | If the critical section has no `.await`, use `std::sync::Mutex`. It's cheaper than `tokio::sync::Mutex`. |
+| **`spawn_blocking` for CPU/blocking work** | CPU-heavy computation, blocking I/O, and sync library calls go in `spawn_blocking`. Never block an async task. |
+| **`JoinSet` for task groups** | When spawning multiple related tasks, use `JoinSet` instead of collecting `JoinHandle`s manually. |
+| **`CancellationToken` for shutdown** | Cleaner than `watch::channel<bool>` for propagating cancellation. Supports hierarchical `child_token()`. |
+| **Cancel-safe futures in `select!`** | Prefer cancel-safe operations (`mpsc::recv`, `watch::changed`, `accept`) inside `select!` loops. |
+| **`biased;` in `select!`** | Use when certain branches must be checked first (e.g., shutdown before work). |
+| **`watch` for config/state broadcast** | Only latest value matters — ideal for config updates, shutdown signals, shared state. |
+| **`oneshot` for request-response** | Embed a `oneshot::Sender` in a request message, send via `mpsc`, receive the response on the oneshot. |
+| **`Semaphore` for rate limiting** | Limit concurrent operations (DB connections, API calls) with `Semaphore::new(N)`. Permits auto-release on drop. |
+| **`interval` + `MissedTickBehavior::Skip`** | For periodic tasks that must not drift. `Burst` (default) catches up; `Skip` drops missed ticks. |
+| **`pin!` before `select!` on streams** | `tokio::pin!(stream)` before using in `select!` to satisfy `Unpin` bound. |
+| **`block_in_place` for brief blocking** | In multi-thread runtime only. Better than `spawn_blocking` when you need to stay on the same thread (e.g., to re-enter async inside). |
+
+## Anti-Patterns ❌
+
+| Anti-Pattern | Why It's Bad | Fix |
+|---|---|---|
+| **Blocking the runtime** | `std::thread::sleep`, `std::fs::read`, CPU loops in async tasks starve all other tasks on that worker thread. | Use `spawn_blocking` or `block_in_place`. |
+| **`std::sync::Mutex` across `.await`** | Locks the OS thread while a future is suspended — other tasks on the same worker can't progress. Can deadlock. | Use `tokio::sync::Mutex` or restructure so the lock drops before `.await`. |
+| **Unbounded channels** | `mpsc::unbounded_channel()` has no backpressure. Producer can OOM the consumer. | Use `mpsc::channel(cap)` with a reasonable capacity. |
+| **Non-cancel-safe ops in `select!`** | `read_exact`, `read_to_end`, `io::copy` lose partial progress on cancellation. Data corruption or loss. | Wrap in `tokio::spawn` and select on the `JoinHandle`. |
+| **`block_on` inside async context** | Panics. Tokio runtime is already running. | Use `spawn_blocking` + `Handle::current().block_on()` only from sync → async bridge. |
+| **`tokio::sync::Mutex` for sync-only data** | Unnecessary async overhead (allocation, context switch) for data never held across `.await`. | Use `std::sync::Mutex` — it's 10-100x faster for brief locks. |
+| **Ignored `JoinHandle`** | Silently swallowed panics and errors. No backpressure. | `await` the handle or log the error. Use `JoinSet` for groups. |
+| **`Arc<Mutex<Vec<_>>>` for high-contention maps** | Every write serializes all readers. | Use `DashMap` or sharded locks. |
+| **Spawning unbounded tasks** | No limit → task count explodes → scheduler thrashing. | Use `Semaphore` or bounded `mpsc` to cap concurrency. |
+| **`.unwrap()` on `send` / `recv`** | Channel closure is a normal event (shutdown, consumer dropped). | Handle `Err` gracefully or use `send().await?` pattern. |
+| **`await`ing in a loop without `select!`** | `while let x = rx.recv().await` can't be interrupted (shutdown, timeout). | Wrap in `tokio::select!` with shutdown/timeout branch. |
+| **Large futures on the stack** | `async fn` captures all locals — large buffers blow the stack. | `Box::pin(future)` to heap-allocate, or use `Box<[u8]>` for large buffers. |
+
+## Tokio Modules Quick Reference
+
+| Module | Feature Flag | Purpose |
+|---|---|---|
+| `tokio::net` | `net` | Async TCP, UDP, Unix sockets. `TcpListener`, `TcpStream`, `UdpSocket`, `UnixListener`, `UnixStream`. |
+| `tokio::fs` | `fs` | Async filesystem ops (`read`, `write`, `create_dir_all`, `remove_file`, etc.). Internally uses `spawn_blocking`. Good for occasional I/O; don't use for high-throughput file streaming — prefer `spawn_blocking` with `std::fs` directly. |
+| `tokio::io` | `io-util`, `io-std` | `AsyncRead`/`AsyncWrite`/`AsyncBufRead` traits, `BufReader`/`BufWriter`, `copy`, `copy_bidirectional`, `split`, `duplex`, `stdin`/`stdout`/`stderr`. |
+| `tokio::sync` | `sync` | Async sync primitives: `Mutex`, `RwLock`, `Semaphore`, `Notify`, `Barrier`, `mpsc`, `oneshot`, `broadcast`, `watch`. |
+| `tokio::time` | `time` | `sleep`, `timeout`, `interval`, `Instant` (pausable in tests with `start_paused`). |
+| `tokio::task` | `rt` | `spawn`, `spawn_blocking`, `spawn_local`, `JoinSet`, `LocalSet`, `yield_now`, `block_in_place`, `coop` (cooperative yielding). |
+| `tokio::signal` | `signal` | `ctrl_c()`, Unix signals (`SIGTERM`, `SIGINT`, etc.), Windows signals. |
+| `tokio::process` | `process` | Async child process management (`Command`, `Child`, `ChildStdin`/`Out`/`Err`). |
+| `tokio::runtime` | `rt` | `Runtime` builder, `Handle`, `block_on`. Use `new_multi_thread()` or `new_current_thread()`. |
+| `tokio::tracing` | `tracing` | Integration with the `tracing` crate for structured logging/instrumentation. |
+
+**Companion crates:**
+
+| Crate | Purpose |
+|---|---|
+| `tokio-stream` | `Stream` wrappers for channels (`ReceiverStream`, `BroadcastStream`, `IntervalStream`) + adapters (`filter`, `map`, `take`). |
+| `tokio-util` | `Framed` + `Codec` for protocol framing, `CancellationToken`, `Either`, `io::StreamReader`, `sync::PollSemaphore`, `task::JoinMap`. |
+| `tokio-test` | `tokio::test` macro extensions, `io::Builder` for mock I/O. |
+
+## Synchronization Types — When to Use Each
+
+### `std::sync::Mutex` vs `tokio::sync::Mutex`
+
+| | `std::sync::Mutex` | `tokio::sync::Mutex` |
+|---|---|---|
+| Hold across `.await` | ❌ Deadlocks or blocks worker thread | ✅ Safe |
+| Performance | Fast (OS-level, no alloc) | Slower (async overhead, heap alloc) |
+| Use when | Quick sync-only access, no `.await` in lock | Must `.await` while holding lock |
+| Contention | Use `try_lock` or keep scope tiny | Natural — yields to other tasks |
+
+### `tokio::sync::RwLock`
+
+Multiple concurrent readers, exclusive writer. Use when reads vastly outnumber writes. Prefer `tokio::sync::Mutex` if reads ≈ writes (RwLock overhead isn't worth it). ⚠️ `tokio::sync::RwLock` is fair — writers won't starve, but readers may queue.
+
+### `tokio::sync::Semaphore`
+
+Limits concurrent access to N. Ideal for: connection pools, rate limiting API calls, bounding parallel file ops. Permits auto-release via `Drop`.
+
+### `tokio::sync::Notify`
+
+Bare wake-up signal, no data. Use for: event signaling, condition variable pattern, custom channel implementations. `notify_one()` wakes one waiter; `notify_waiters()` wakes all.
+
+### `tokio::sync::Barrier`
+
+N tasks wait at the barrier, all proceed together. Use for: batch synchronization, test handoffs, phased algorithms. Rarely needed in production code; more common in tests.
+
+### Channel Decision Table
+
+| Need | Channel | Data | Pattern |
+|---|---|---|---|
+| Multiple producers, single consumer | `mpsc::channel(cap)` | Any | Work queues, pipelining |
+| Fire-and-forget, no backpressure needed | `mpsc::unbounded_channel()` | Any | Logging, metrics (use sparingly) |
+| Single request → single response | `oneshot` | Any | RPC-style: embed `Sender` in request |
+| All subscribers see every message | `broadcast::channel(cap)` | T: Clone | Chat, event fan-out |
+| Subscribers only need latest value | `watch::channel(init)` | T: Clone | Config, state, shutdown signal |
 
 ## Cargo.toml
 
 ```toml
 [dependencies]
 tokio = { version = "1", features = ["full"] }
-# Or pick features: rt, rt-multi-thread, macros, net, io-util, sync, signal, time, fs
-# "full" includes everything EXCEPT test-util and tracing
+# Or pick features: rt, rt-multi-thread, macros, net, sync
+# Minimal practical set for network services. Add io-util, time, signal, fs as needed.
+# Use "full" while prototyping, then trim before release.
+# Note: io-std needed for stdin/stdout/stderr; process for async subprocesses.
 
 # Streams
 tokio-stream = "0.1"
-# Framing/codecs
+# Framing/codecs + CancellationToken
 tokio-util = { version = "0.7", features = ["codec"] }
 
 [dev-dependencies]
@@ -82,13 +181,7 @@ handle.abort();
 
 ## Shared State
 
-**`std::sync::Mutex` vs `tokio::sync::Mutex`:**
-
-| | `std::sync::Mutex` | `tokio::sync::Mutex` |
-|---|---|---|
-| Hold across `.await` | NO — deadlocks | YES |
-| Performance | Faster | Slower (async overhead) |
-| Use when | Quick sync data access, no `.await` in critical section | Must hold lock across `.await` points |
+For high contention, consider `DashMap` or sharded locks.
 
 ```rust
 // std::sync::Mutex — brief lock, no .await inside
@@ -101,44 +194,31 @@ let mut c = db.lock().await;
 c.query("SELECT ...").await; // OK
 ```
 
-For high contention, consider sharding or `dashmap`.
-
 ## Channels
 
-**mpsc — multi-producer, single-consumer:**
 ```rust
-let (tx, mut rx) = mpsc::channel::<String>(100); // bounded, backpressure
+// mpsc — bounded (backpressure)
+let (tx, mut rx) = mpsc::channel::<String>(100);
 let tx2 = tx.clone();
 tx.send("msg").await.unwrap();
-while let Some(msg) = rx.recv().await { } // None when all senders dropped
-```
-Unbounded: `mpsc::unbounded_channel()` — `send()` is sync, no backpressure.
+while let Some(msg) = rx.recv().await { }
 
-**oneshot — single value, single use:**
-```rust
+// oneshot — single value, single use
 let (tx, rx) = oneshot::channel::<String>();
-tx.send("result".into()).unwrap(); // send is NOT async
+tx.send("result".into()).unwrap();
 let val = rx.await.unwrap();
-```
-Common: embed in request struct for request/response pattern.
 
-**broadcast — all receivers get every message:**
-```rust
+// broadcast — all receivers get every message. T: Clone required.
 let (tx, mut rx1) = broadcast::channel::<i32>(16);
 let mut rx2 = tx.subscribe();
 tx.send(10).unwrap();
-// Both rx1 and rx2 receive 10. T: Clone required.
-// Late subscribers miss earlier messages. Lagged receivers get RecvError::Lagged(n).
-```
 
-**watch — latest value only:**
-```rust
+// watch — latest value only. Great for config, shutdown.
 let (tx, mut rx) = watch::channel("initial");
 tx.send("updated").unwrap();
-println!("{}", *rx.borrow());     // borrow current value (no clone)
-rx.changed().await.unwrap();      // wait for new value
+println!("{}", *rx.borrow());
+rx.changed().await.unwrap();
 ```
-Great for config changes, shutdown signals.
 
 ## Synchronization Primitives
 
@@ -154,9 +234,12 @@ let _permit = sem.acquire().await.unwrap(); // released on drop
 
 // Notify — wake tasks (no data)
 let notify = Arc::new(Notify::new());
-notify.notify_one();              // wake one waiter
-notify.notify_waiters();          // wake ALL
-// In another task: notify.notified().await;
+notify.notify_one();
+notify.notified().await;
+
+// Barrier — N tasks synchronize
+let barrier = Arc::new(Barrier::new(4));
+// Each task: barrier.wait().await;
 ```
 
 ## Async I/O
@@ -170,10 +253,9 @@ reader.read_to_end(&mut vec).await?;
 writer.write_all(&buf).await?;
 writer.flush().await?;
 
-// Copy between streams
 tokio::io::copy(&mut reader, &mut writer).await?;
+tokio::io::copy_bidirectional(&mut client, &mut server).await?;
 
-// Buffered reading
 use tokio::io::{BufReader, AsyncBufReadExt};
 let reader = BufReader::new(file);
 let mut lines = reader.lines();
@@ -188,7 +270,6 @@ use futures::{SinkExt, StreamExt};
 
 // Line-delimited
 let framed = Framed::new(tcp_stream, LinesCodec::new());
-// Stream<Item=Result<String>> + Sink<String>
 
 // Length-delimited (4-byte BE prefix)
 let framed = Framed::new(tcp_stream, LengthDelimitedCodec::new());
@@ -239,36 +320,24 @@ use tokio_stream::{self as stream, StreamExt};
 let mut s = stream::iter(vec![1, 2, 3]);
 while let Some(val) = s.next().await { }
 
-// Adapters
 let s = stream::iter(1..=10).filter(|x| x % 2 == 0).map(|x| x * 10).take(3);
 
-// From channel
 use tokio_stream::wrappers::ReceiverStream;
 let stream = ReceiverStream::new(rx);
-
-// In select! (must pin)
-tokio::pin!(stream);
-tokio::select! {
-    Some(val) = stream.next() => { }
-    _ = other_future() => { }
-}
 ```
 
 ## Timers
 
 ```rust
-// Sleep
 tokio::time::sleep(Duration::from_millis(100)).await;
 
-// Timeout
 match tokio::time::timeout(Duration::from_secs(5), op()).await {
     Ok(result) => { }
     Err(_) => { /* timed out */ }
 }
 
-// Interval
 let mut ticker = tokio::time::interval(Duration::from_secs(1));
-ticker.set_missed_tick_behavior(MissedTickBehavior::Skip); // or Burst (default), Delay
+ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
 loop { ticker.tick().await; do_work().await; }
 ```
 
@@ -301,13 +370,13 @@ tokio::fs::create_dir_all("a/b/c").await?;
 tokio::fs::remove_file("path.txt").await?;
 ```
 
+⚠️ For high-throughput file I/O, `tokio::fs` adds indirection over `spawn_blocking`. Consider using `spawn_blocking` + `std::fs` directly for batch file operations.
+
 ## Signal Handling
 
 ```rust
-// Ctrl+C (cross-platform)
 tokio::signal::ctrl_c().await?;
 
-// Unix signals
 use tokio::signal::unix::{signal, SignalKind};
 let mut sigterm = signal(SignalKind::terminate())?;
 sigterm.recv().await;
@@ -318,9 +387,7 @@ sigterm.recv().await;
 ```rust
 // Pattern: watch channel + ctrl_c
 let (shutdown_tx, shutdown_rx) = watch::channel(false);
-
 // Workers select on shutdown_rx.changed()
-// Main waits for ctrl_c, then sends true
 
 // Alternative: CancellationToken (tokio-util)
 use tokio_util::sync::CancellationToken;
@@ -341,7 +408,7 @@ rt.block_on(async { do_async().await });
 let result = tokio::task::spawn_blocking(|| sync_work()).await.unwrap();
 
 // Sync sending into async channel
-tx.blocking_send(value).unwrap(); // blocks the thread, safe from spawn_blocking
+tx.blocking_send(value).unwrap();
 ```
 
 **Never** call `block_on` from within an async context — it will panic.
@@ -359,8 +426,9 @@ async fn multi() { }
 #[tokio::test(start_paused = true)]
 async fn time_test() {
     let start = tokio::time::Instant::now();
-    tokio::time::sleep(Duration::from_secs(60)).await; // completes instantly
-    assert!(start.elapsed() >= Duration::from_secs(60));
+    tokio::time::sleep(Duration::from_secs(60)).await;
+    // With start_paused, time stays frozen — the 60s sleep completes instantly
+    assert!(start.elapsed() < Duration::from_millis(100));
 }
 ```
 
@@ -377,23 +445,31 @@ async fn time_test() {
 | Unbounded channels without backpressure | Prefer bounded `mpsc::channel(cap)` |
 | Large futures on the stack | `Box::pin(future)` to heap-allocate |
 
-## When to Use What
+## When NOT to Use Tokio — Alternatives
 
-| Need | Use |
-|---|---|
-| Concurrent async work | `tokio::spawn` |
-| Blocking/CPU work | `spawn_blocking` |
-| `!Send` futures | `spawn_local` + `LocalSet` |
-| Manage N tasks | `JoinSet` |
-| Mutex across `.await` | `tokio::sync::Mutex` |
-| Mutex (brief, no `.await`) | `std::sync::Mutex` |
-| Limit concurrency | `Semaphore` |
-| Wake task (no data) | `Notify` |
-| One value between tasks | `oneshot` |
-| Many values, one consumer | `mpsc` |
-| Latest-value broadcast | `watch` |
-| All-values broadcast | `broadcast` |
-| Delay | `sleep` |
-| Fail if too slow | `timeout` |
-| Periodic work | `interval` |
-| Shutdown signal | `ctrl_c` + `watch` or `CancellationToken` |
+Tokio adds complexity (runtime, `Send` bounds, async color function). Don't reach for it when simpler tools work.
+
+| Scenario | Why Tokio is Bad | Better Alternative |
+|---|---|---|
+| **CPU-bound computation** (crypto, image processing, compression) | No I/O to overlap; async yields no benefit; runtime + scheduling overhead. | `rayon` — parallel iterators, thread pools. Pure sync code. |
+| **Simple CLI tools** (file converters, one-shot scripts) | Runtime startup cost, binary bloat, complexity for sequential work. | `std::fs`, `std::io`, `clap`. Plain sync Rust. |
+| **Batch data processing** (ETL, CSV transform) | No concurrent I/O; sequential processing is clearer and faster. | `std::fs` + iterators. For parallelism: `rayon`. |
+| **Embedded / no-std / WASM (limited)** | Tokio runtime requires OS threads, allocator, full std. | `embassy` (embedded async), `futures::executor::block_on` (minimal). |
+| **Library code (not applications)** | Libraries should not pick a runtime — forces it on consumers. | Write runtime-agnostic code with `futures`, `async-trait`. Let the app choose runtime. |
+| **Heavy blocking I/O** (legacy DB drivers, C FFI) | Wrapping everything in `spawn_blocking` adds overhead and thread pool pressure. | `std::sync` + `crossbeam` channels, or `threadpool` crate. |
+| **Real-time / low-latency** (games, audio, trading) | GC-like pauses from cooperative scheduling; unpredictable task wake-up latency. | `ringbuf` + dedicated OS threads. `pasts` for constrained async. |
+| **gRPC / Protobuf services** | `tonic` works with multiple runtimes but Tokio is common. If you need glommio/monoio, skip Tokio. | `tonic` can run on `glommio` or `monoio` runtimes. |
+| **File-heavy workloads** (bulk file I/O) | `tokio::fs` is just `spawn_blocking` underneath; adds indirection. | `std::fs` directly (or `spawn_blocking` + `std::fs` within Tokio apps). |
+| **Simple concurrent pipelines** (3-4 stages) | Full Tokio runtime is overkill for a fixed pipeline. | `crossbeam` channels + `std::thread`. Simpler, no async. |
+
+### Quick Decision Guide
+
+```
+Need async I/O (network, timers, many concurrent connections)?
+  → YES: Use Tokio.
+  → NO: Need parallel CPU work?
+    → YES: Use rayon.
+    → NO: Need simple concurrency (a few threads)?
+      → YES: Use std::thread + crossbeam channels.
+      → NO: Just use plain sync Rust. No runtime needed.
+```

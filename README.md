@@ -110,7 +110,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `reqwest-rust` | Async client, TLS, JSON/multipart, streaming, retries |
 | `smol-rust` | `block_on`, spawn, Executor, Timer, `Async<T>`, async-compat, smol vs tokio |
 | `tempfile-rust` | `NamedTempFile`, `TempDir`, `SpooledTempFile`, `Builder`, persist |
-| `tokio-rust` | Runtime, channels, sync primitives, async I/O, `select!`, shutdown |
+| `tokio-rust` | Patterns, anti-patterns, module reference, sync primitives, alternatives |
 | `tokio-stream-rust` | `StreamExt`, `ReceiverStream`, `StreamMap`, timeout, throttle |
 | `tonic-rust` | gRPC, protobuf codegen, streaming, interceptors, health checks |
 | `tower-rust` | `Service`, `Layer`, timeouts, buffers, rate limits, retries |
