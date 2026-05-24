@@ -151,6 +151,12 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `design-patterns-ts` | GoF patterns with idiomatic TypeScript |
 | `manual-testing-node-js` | Env setup, docker DB + migrations, SUI contracts, plan + execute |
 
+### Datastores (Rust & JavaScript / TypeScript)
+
+| Skill | Covers |
+|-------|--------|
+| `valkey` | Features, Redis differences, Rust/Node clients, Lua, patterns/antipatterns |
+
 ### Sui / Move
 
 | Skill | Covers |
