@@ -26,13 +26,13 @@ RocksDB is an **embedded** (in-process, no server) persistent key-value store fr
 - **BlobDB (key-value separation)** — store large values in separate blob files (`enable_blob_files`, `min_blob_size`) to cut write amplification on big values.
 - **Bulk ingest** — build SST files offline with `SstFileWriter` and `IngestExternalFile` for fast loads (skips the write path).
 - **Other** — TTL DB, `DeleteRange` (range tombstones), `MultiGet` (batched point reads), backups/`Checkpoint`, rate limiter, block cache, statistics/`perf_context`.
-- **Recent (10.x → 11.x, 2025–2026):** parallel compression CPU overhead cut up to ~65% (10.7); `FlushWAL(FlushWALOptions)` with sync + IO priority (10.8); `max_manifest_space_amp_pct` + larger manifest control (10.8/10.9); FIFO `max_data_files_size` / `use_kv_ratio_compaction` and `index_block_search_type=binary_search` (11.0); `allow_ingest_behind` for backfilling older data (10.6).
+- **Recent (10.x → 11.x, 2025–2026):** parallel compression CPU overhead cut up to ~65% (10.7); C++ `FlushWAL(FlushWALOptions)` with sync + IO priority (10.8) — note the Rust wrappers currently expose only `db.flush_wal(sync: bool)`; `max_manifest_space_amp_pct` + larger manifest control (10.8/10.9); FIFO `max_data_files_size` / `use_kv_ratio_compaction` and `index_block_search_type=binary_search` (11.0); `allow_ingest_behind` for backfilling older data (exposed in the Rust bindings since at least 10.4).
 
 ## Library Bindings
 
 ### Rust
 - **`rocksdb`** (crate from the `rust-rocksdb` org) — the widely used wrapper over `librocksdb-sys`. Exposes `DB`, `Options`, `ColumnFamily`, `WriteBatch`, `DBIterator`, `TransactionDB`, merge operators (`MergeFn`), `MultiGet`. Statically linked to a pinned RocksDB; building from source needs **clang/LLVM**.
-- **`rust-rocksdb`** (Zaidoon's actively maintained fork, v0.49+) — tracks newer upstream RocksDB releases faster than the base crate. Choose it when you need recent RocksDB features.
+- **`rust-rocksdb`** (Zaidoon's actively maintained fork, ~0.48.x) — tracks newer upstream RocksDB releases faster than the base crate. Choose it when you need recent RocksDB features. Note its library name is `rust_rocksdb` (import `use rust_rocksdb::{...}`), unlike the base crate's `rocksdb`.
 - Both have a multi-threaded mode (`DBWithThreadMode`) — share the DB via `Arc<DB>`; the handle is `Send + Sync`.
 
 ```rust
@@ -80,7 +80,7 @@ await db.close();
 | Antipattern | Why it hurts | Do instead |
 |-------------|-------------|------------|
 | Running with default `Options` in production | Defaults are conservative; wrong for most workloads | Tune memtable, compaction, cache, bloom filters per workload |
-| One sync write per operation | `fsync` per write throttles throughput | Batch with `WriteBatch`; use `WriteOptions::disableWAL` only for replayable/ephemeral data |
+| One sync write per operation | `fsync` per write throttles throughput | Batch with `WriteBatch`; use `WriteOptions::disable_wal(true)` only for replayable/ephemeral data |
 | Storing large blobs inline | Bloats SSTs, multiplies write amplification in compaction | BlobDB / key-value separation |
 | `Get` in a loop for many keys | N round trips through all levels | `MultiGet` (batched, parallel) |
 | Full unbounded iteration to find a range | Scans the whole keyspace | Set iterator lower/upper bounds or a `prefix_extractor` |

@@ -17,7 +17,7 @@ ClickHouse is a column-oriented OLAP database for real-time analytics over large
 
 - **`JSON` data type (GA):** native semi-structured column with per-path subcolumn storage and typed reads — replaces the old `Object('json')`/string-blob approach. Pairs with **`Dynamic`** (one column, many types) and **`Variant(T1, T2, …)`** (tagged union) for flexible schemas.
 - **Async inserts** (`async_insert=1`): the server batches many small inserts server-side into larger parts — the standard fix for "many small producers." Tune `wait_for_async_insert`, `async_insert_max_data_size`/`busy_timeout_ms`.
-- **Lightweight `DELETE`** and **on-the-fly / lightweight `UPDATE`:** far cheaper than legacy `ALTER TABLE … UPDATE/DELETE` mutations, but still not OLTP — use sparingly.
+- **Lightweight `DELETE`** is widely available and far cheaper than legacy `ALTER TABLE … DELETE` mutations. **Lightweight / on-the-fly `UPDATE`** is newer and version/settings-gated — not equivalent to DELETE and not OLTP-grade; use sparingly.
 - **Refreshable materialized views:** scheduled full-refresh MVs (in addition to classic insert-triggered incremental MVs) for periodic rollups/denormalization.
 - **Vector search:** approximate-nearest-neighbor indexes for embedding similarity, complementing the analytical core.
 - **Query cache, parallel replicas, and projections** for read scaling and alternate sort orders within one table.
@@ -25,7 +25,7 @@ ClickHouse is a column-oriented OLAP database for real-time analytics over large
 ## Client Libraries
 
 ### Rust
-- **`clickhouse`** (the `clickhouse-rs`/ClickHouse-Rust crate, `clickhouse` on crates.io) — the recommended async client. Uses the efficient **RowBinary** format with `#[derive(Row, Serialize, Deserialize)]` structs, HTTP transport, optional `lz4` compression, and a buffered `insert`/`inserter` API for batching. Integrates with `tokio`.
+- **`clickhouse`** (the ClickHouse-Rust crate, `clickhouse` on crates.io) — the recommended async client. Transfers typed `#[derive(Row, Serialize, Deserialize)]` structs over HTTP using **`RowBinaryWithNamesAndTypes`** by default (column-name/type validation; plain `RowBinary` requires disabling that), optional `lz4` compression, and a buffered `insert`/`inserter` API for batching. Integrates with `tokio`.
 - **`clickhouse-rs`** (the older `suharev7` TCP-native-protocol crate) — still around; prefer the HTTP `clickhouse` crate for new code and broad compatibility (incl. ClickHouse Cloud).
 
 ```rust
@@ -36,7 +36,7 @@ use serde::Serialize;
 struct Event { id: u64, ts: u32, kind: String }
 
 let client = Client::default().with_url("http://localhost:8123").with_database("app");
-let mut insert = client.insert("events")?;       // batch many rows into one part
+let mut insert = client.insert::<Event>("events").await?; // async; type the row
 for e in batch { insert.write(&e).await?; }
 insert.end().await?;                              // one large insert, not row-by-row
 ```
@@ -55,6 +55,7 @@ await client.insert({
   format: 'JSONEachRow',
 });
 const rs = await client.query({query: 'SELECT count() FROM events', format: 'JSONEachRow'});
+const data = await rs.json();   // consume the ResultSet (or stream it)
 ```
 
 Use one long-lived client; send large batches (see Patterns). Follow [js-conventions] (ESM, async/await).
@@ -78,7 +79,7 @@ Use one long-lived client; send large batches (see Patterns). Follow [js-convent
 | Frequent `ALTER TABLE … UPDATE/DELETE` mutations | Rewrites whole parts; very expensive, async, easy to pile up | Use lightweight delete/update sparingly, or model with `ReplacingMergeTree`/`CollapsingMergeTree` |
 | `OPTIMIZE TABLE … FINAL` to force merges in prod | Rewrites entire partitions; huge I/O, not for routine use | Trust background merges; use `FINAL` at query time if needed |
 | `FINAL` on every query as a habit | Forces merge-on-read, slow on big data | Pre-aggregate; only `FINAL` where correctness needs it |
-| High-cardinality column first in `ORDER BY` | Wrecks index granule skipping and compression | Low-cardinality columns first; high-cardinality later |
+| Picking `ORDER BY` columns without regard to query filters | Sparse index can't prune granules; poor compression | Order by common filter/range columns; among those, lower cardinality earlier |
 | Using ClickHouse for point lookups / OLTP | Designed for scans, not single-row get/update | Use a KV/OLTP store; ClickHouse for analytics |
 | `SELECT *` on wide tables | Reads every column from disk (columnar) | Select only needed columns |
 | Overusing `Nullable(T)` | Extra null bitmap → storage + slower reads | Use sensible defaults (0, `''`) unless null is meaningful |
