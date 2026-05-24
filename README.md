@@ -108,6 +108,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `otel-rust-observable-handles` | Observable instruments, keep-alive pattern, sdk 0.27+ |
 | `opentelemetry-rust` | Traces, metrics, logs, OTLP, propagation, sampling |
 | `reqwest-rust` | Async client, TLS, JSON/multipart, streaming, retries |
+| `smol-rust` | `block_on`, spawn, Executor, Timer, `Async<T>`, async-compat, smol vs tokio |
 | `tempfile-rust` | `NamedTempFile`, `TempDir`, `SpooledTempFile`, `Builder`, persist |
 | `tokio-rust` | Runtime, channels, sync primitives, async I/O, `select!`, shutdown |
 | `tokio-stream-rust` | `StreamExt`, `ReceiverStream`, `StreamMap`, timeout, throttle |
