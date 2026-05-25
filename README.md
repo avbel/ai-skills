@@ -160,6 +160,12 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `clickhouse` | OLAP features, JSON/Variant types, async inserts, Rust/Node clients, antipatterns |
 | `rocksdb` | LSM architecture, column families, compaction, Rust/Node bindings, antipatterns |
 
+### Practices
+
+| Skill | Covers |
+|-------|--------|
+| `code-review` | Production-focused reviews: observability, compat, migrations, idempotency, PR quality |
+
 ### Sui / Move
 
 | Skill | Covers |
