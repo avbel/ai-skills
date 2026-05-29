@@ -10,10 +10,10 @@ mode="${1:-grpc}"
 network="${2:-testnet}"
 
 case "$mode" in
-  grpc|core|legacy-json-rpc)
+  grpc|graphql|core)
     ;;
   *)
-    echo "Unsupported mode: $mode. Use grpc, core, or legacy-json-rpc." >&2
+    echo "Unsupported mode: $mode. Use grpc, graphql, or core." >&2
     exit 2
     ;;
 esac
@@ -31,7 +31,7 @@ if [ "$network" = "local" ]; then
   network="localnet"
 fi
 
-echo "Preparing Sui TypeScript SDK scaffold for $mode on $network" >&2
+echo "Preparing Sui TypeScript SDK v2 scaffold for $mode on $network" >&2
 
 json_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
@@ -50,13 +50,24 @@ case "$mode" in
     esac
     snippet="const client = new SuiGrpcClient({ network: '$network', baseUrl: '$base_url' });"
     ;;
+  graphql)
+    imports="import { SuiGraphQLClient } from '@mysten/sui/graphql';"
+    case "$network" in
+      localnet)
+        url="http://127.0.0.1:8080/graphql"
+        ;;
+      mainnet)
+        url="https://sui-mainnet.mystenlabs.com/graphql"
+        ;;
+      *)
+        url="https://graphql.$network.sui.io/graphql"
+        ;;
+    esac
+    snippet="const client = new SuiGraphQLClient({ url: '$url', network: '$network' });"
+    ;;
   core)
     imports="import type { ClientWithCoreApi } from '@mysten/sui/client';"
     snippet="export async function getChainIdentifier(client: ClientWithCoreApi) { return client.core.getChainIdentifier(); }"
-    ;;
-  legacy-json-rpc)
-    imports="import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';"
-    snippet="const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl('$network'), network: '$network' });"
     ;;
 esac
 
@@ -80,8 +91,8 @@ cat <<JSON
   "snippet": "$escaped_snippet",
   "notes": [
     "Prefer SuiGrpcClient for new code.",
-    "Use client.core for reusable libraries.",
-    "JSON-RPC is deprecated; use legacy-json-rpc only for existing compatibility."
+    "Use client.core for reusable, transport-agnostic libraries.",
+    "JSON-RPC is deprecated and will be decommissioned — do not use."
   ]
 }
 JSON
