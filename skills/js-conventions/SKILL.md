@@ -34,6 +34,18 @@ Apply these conventions in JavaScript and TypeScript projects. These rules are w
 - Use `async` and `await`. Do not use `.then()` chains or callback-based patterns in new code.
 - Use async `readFile` from `node:fs/promises`; do not use `readFileSync` in normal application code.
 - Do not prefix promise calls with `void`.
+- In async functions, use promise-based timers from `node:timers/promises` instead of global `setTimeout` or `setInterval`:
+  ```ts
+  import { setTimeout as sleep, setInterval } from 'node:timers/promises';
+  
+  // Use await sleep() for delays
+  await sleep(1000);
+  
+  // Use for await with setInterval() for periodic tasks
+  for await (const _ of setInterval(1000)) {
+    // Runs every 1000ms
+  }
+  ```
 
 ## Type Safety
 
@@ -123,6 +135,35 @@ export default [
 React: run `xo --react` or enable React in the flat config block.
 
 Prettier: do not introduce it. If already present, use XO's `prettier: 'compat'` or match the existing setup.
+
+## Replaced Packages
+
+Do not add these legacy packages to new projects. Use the modern replacement instead.
+
+| Legacy package | Replacement | Notes |
+|---------------|-------------|-------|
+| `lodash` | native `Array`/`Object`/`Map`/`Set` methods, `structuredClone` | Every lodash utility (`_.map`, `_.filter`, `_.cloneDeep`, `_.merge`, `_.debounce`, `_.pick`, `_.omit`) has a built-in equivalent in ES2024+. Stop importing it. |
+| `axios` | native `fetch` (Undici) | Node ships `fetch` globally since v18. For retry/timeout patterns use a thin wrapper (e.g., `ky`) or Undici `Agent`/`ProxyAgent` — not a full HTTP library that reimplements fetch. |
+| `moment` | `Temporal` (global, Node 26+) / `date-fns` / `dayjs` | `moment` is in maintenance mode, mutable, and bundles all locales. Prefer native `Temporal` on Node 26+; `date-fns` or `dayjs` for broader runtime support. |
+| `uuid` | `crypto.randomUUID()` | Built into Node 19+. Zero deps, one call. |
+| `node-fetch` | native `fetch` | Built into Node 18+. Remove the dependency. |
+| `request` | native `fetch` | Deprecated since 2020. No longer maintained. |
+| `rimraf` | `fs.rm(path, { recursive: true })` | Built into Node 14.14+. One line, no dependency. |
+| `mkdirp` | `fs.mkdir(path, { recursive: true })` | Built into Node 10.12+. Drop the package. |
+| `dotenv` | `node --env-file=.env` | Built into Node 20.6+. No runtime dependency needed. |
+| `bluebird` | native `Promise`, `Promise.allSettled/any/try` | All Bluebird features are now in the language (ES2015–2024). |
+| `core-js` | native ES2024+ | Unnecessary for Node 24+ targets. V8 14.x ships everything `target: es2025` needs. |
+| `qs` | `URLSearchParams` | Built into all modern runtimes. |
+| `chalk` | `util.styleText()` | Built into Node 21.7+. Colors, bold, underline — no dependency. |
+| `cross-env` | native `NODE_ENV=production node ...` | Node 20+ handles cross-platform env vars natively. Windows catches up. |
+| `deep-clone` / `clone` | `structuredClone()` | Built into Node 17+. Deep copies objects, handles circular refs. |
+| `cross-fetch` / `isomorphic-fetch` | native `fetch()` | Fetch is native in Node 18+, browsers, Deno, Bun. No polyfill needed. |
+| `form-data` | `FormData` global | Built into Node 17+. |
+| `abort-controller` | `AbortController` global | Built into Node 15+. |
+| `left-pad` | `String.prototype.padStart()` | ES2017. The incident that broke the internet for a reason. |
+| `foreach` / `isarray` / `isobject` | `Array.forEach`, `Array.isArray`, `typeof x === 'object'` | ES5. Literally part of the language for over a decade. |
+| `readable-stream` | native `node:stream` | Node has had streams from day one. The polyfill is never needed. |
+| `underscore` | native methods | Predates ES5+. Replace with built-in `Array`, `Object`, `Map`, `Set` methods. |
 
 ## Post-Edit Validation
 
