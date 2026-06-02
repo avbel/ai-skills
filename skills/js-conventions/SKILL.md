@@ -19,6 +19,7 @@ Apply these conventions in JavaScript and TypeScript projects. These rules are w
 - Use camelCase for constants and variables. Do not use UPPER_SNAKE_CASE for constants.
 - Use PascalCase for enum type names.
 - Always wrap `if`, `while`, and `for` bodies in braces, even for single-line bodies.
+- Prefer `switch`/`case` constructions over multiple `if`/`else if` statements when matching a single expression against multiple potential values.
 - Use `as const` for constant arrays and derive union types with `typeof values[number]`.
 - Use full descriptive names for variables, functions, and types. Avoid abbreviations and short names.
 
