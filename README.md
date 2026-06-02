@@ -165,6 +165,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | Skill | Covers |
 |-------|--------|
 | `code-review` | Production-focused reviews: observability, compat, migrations, idempotency, PR quality |
+| `gemini-review-code` | Delegate a local git code review to Antigravity (`agy`) |
 
 ### Sui / Move
 
