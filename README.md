@@ -168,6 +168,12 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `code-review` | Production-focused reviews: observability, compat, migrations, idempotency, PR quality |
 | `gemini-review-code` | Delegate a local git code review to Antigravity (`agy`) |
 
+### CI / DevOps
+
+| Skill | Covers |
+|-------|--------|
+| `github-actions-ci` | pnpm/Rust/Docker CI, workflow_dispatch, caching, flow validation |
+
 ### Sui / Move
 
 | Skill | Covers |

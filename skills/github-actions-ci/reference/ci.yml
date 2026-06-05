@@ -1,0 +1,110 @@
+# Complete build-CI workflow: Node/pnpm + Rust + Docker, with caching and a
+# manual trigger. Copy to .github/workflows/ci.yml and trim the jobs you don't
+# need. Samples use major-tag action pins for readability — pin to commit SHAs
+# (+ Dependabot) for production. See the github-actions-ci skill for details.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment   # consumed by your own deploy steps
+        type: environment
+      release:
+        description: Build and push the Docker image
+        type: boolean
+        default: false
+
+# Clamp the default read-write GITHUB_TOKEN to read-only; widen per job.
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same ref to save runner minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # pnpm must be installed BEFORE setup-node so `cache: pnpm` can locate
+      # the store. Version comes from package.json "packageManager".
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Honours rust-toolchain.toml when present; @stable is the channel.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      # Must come after the toolchain step (cache key includes the compiler).
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test --all-features
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [node, rust]
+    permissions:
+      contents: read
+      packages: write          # required to push to ghcr.io
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # metadata-action lowercases the image name, so an uppercase
+          # org/repo (e.g. MyOrg/MyRepo) is handled automatically.
+          images: ghcr.io/${{ github.repository }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          # Build on PRs (validation + cache warming); push on main and on a
+          # manual run that ticked the "release" input.
+          push: >-
+            ${{ github.event_name == 'push'
+                || (github.event_name == 'workflow_dispatch' && inputs.release) }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
