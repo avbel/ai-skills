@@ -99,6 +99,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | Skill | Covers |
 |-------|--------|
 | `anyhow-rust` | `anyhow::Error`, `bail!`/`ensure!`, error chaining, backtraces |
+| `asupersync-rust` | Cx, regions, cancellation, channels, HTTP server demos |
 | `axum-rust` | Router, handlers, extractors, State, tower middleware |
 | `clap-rust` | Derive Parser, subcommands, env/default, shell completions |
 | `dotenvy-rust` | `.env` loading, override modes, iteration, env-specific config |
