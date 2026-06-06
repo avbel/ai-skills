@@ -102,12 +102,14 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `asupersync-rust` | Cx, regions, cancellation, channels, HTTP server demos |
 | `axum-rust` | Router, handlers, extractors, State, tower middleware |
 | `clap-rust` | Derive Parser, subcommands, env/default, shell completions |
+| `divan-rust` | Cargo bench setup, Bencher, counters, allocation profiling |
 | `dotenvy-rust` | `.env` loading, override modes, iteration, env-specific config |
 | `eyre-rust` | `Report`, `WrapErr`, custom handlers, `eyre!`, anyhow migration |
 | `futures-util-rust` | `StreamExt`, `FutureExt`, `TryStreamExt`, `select!`, `join`, sinks |
 | `hotpath-rs` | Rust profiling: timing, allocations, CPU, Tokio, MCP |
+| `hud-tokio-profiler` | eBPF zero-instrumentation profiler for Tokio worker blocking; tool comparison |
 | `moka-rust` | `sync::Cache`, `future::Cache`, TTL/TTI, eviction, weighted |
-| `otel-rust-observable-handles` | Observable instruments, keep-alive pattern, sdk 0.27+ |
+| `otel-observable-handles-rust` | Observable instruments, keep-alive pattern, sdk 0.27+ |
 | `opentelemetry-rust` | Traces, metrics, logs, OTLP, propagation, sampling |
 | `reqwest-rust` | Async client, TLS, JSON/multipart, streaming, retries |
 | `smol-rust` | `block_on`, spawn, Executor, Timer, `Async<T>`, async-compat, smol vs tokio |
