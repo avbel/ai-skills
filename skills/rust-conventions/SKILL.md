@@ -14,6 +14,8 @@ When driving an LLM to produce Rust that follows these conventions, also apply [
 - Use Rust edition 2024 or later when the project allows it.
 - After Rust code changes, run `cargo fmt` and `cargo clippy` when available and appropriate for the repository.
 - When introducing or tightening lint policy, prefer Cargo-level Clippy lint groups over ad hoc command-only flags so CI, IDEs, and local runs share one policy.
+- Encode incompatible target, platform, and feature combinations with `compile_error!` or `cfg` gates so unsupported builds fail early with a clear message.
+- Prefer compile-time or debug-time invariant checks over relying on comments for safety-critical protocols.
 
 ## Clippy Lint Policy
 
@@ -59,6 +61,8 @@ nursery = { level = "warn", priority = -1 }
 - Use unit-like structs for marker types and trait-only implementations.
 - Structs should own their data unless lifetimes are explicitly managed.
 - Prefer enums with data variants over separate structs when the types represent alternatives of the same concept.
+- Model lifecycle-heavy protocols as explicit enums or state machines with named terminal states instead of scattered booleans.
+- Add `#[must_use]` to handles, guards, permits, builders, and token-like values where dropping the value silently changes behavior or loses work.
 
 ## Error Handling
 
@@ -116,6 +120,10 @@ nursery = { level = "warn", priority = -1 }
 - Do not hold a blocking mutex guard across `.await`; restructure the code, clone/move the needed data out, or switch to an async-aware primitive.
 - For read-heavy shared state, consider `RwLock`; for bounded concurrency, consider `Semaphore`; for ownership transfer or work distribution, use channels.
 - Keep lock acquisition order consistent across the crate and document it when multiple locks may be held together.
+- For subsystems with multiple lock classes, document a lock hierarchy with stable rank names. When practical, enforce the hierarchy in debug builds or behind an opt-in diagnostics feature.
+- When operations cross module boundaries while holding locks, document both lock rank and module ownership so cross-module deadlock patterns can be reviewed.
+- Do not create orphan background work. Every spawned thread or task should have an owner, cancellation/shutdown path, and join/abort/drain decision.
+- Treat cancellation and shutdown as protocols for code that performs external effects. Reserve resources before an `.await`, then commit in a distinct step after cancellation-sensitive work is safe to finish.
 
 ## Testing
 
