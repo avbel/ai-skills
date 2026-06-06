@@ -135,6 +135,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 |-------|--------|
 | `biome-js` | Biome formatter, linter, XO migration, VS Code |
 | `fastify-js` | Fastify 5 plugins, schemas, hooks, error handling, testing |
+| `hono-js` | Routing, middleware, validation, RPC, CLI docs/search |
 | `vitest-js` | vitest.config, `vi` mocking, snapshots, coverage, browser mode |
 | `cacheable-js` | Keyv, L1/L2, wrap/memoize, hooks, distributed sync |
 | `clickhouse-js` | MergeTree, schema, aggregates, materialized views, Node client |
