@@ -133,6 +133,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 
 | Skill | Covers |
 |-------|--------|
+| `biome-js` | Biome formatter, linter, XO migration, VS Code |
 | `fastify-js` | Fastify 5 plugins, schemas, hooks, error handling, testing |
 | `vitest-js` | vitest.config, `vi` mocking, snapshots, coverage, browser mode |
 | `cacheable-js` | Keyv, L1/L2, wrap/memoize, hooks, distributed sync |
