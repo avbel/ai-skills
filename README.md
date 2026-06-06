@@ -105,6 +105,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `dotenvy-rust` | `.env` loading, override modes, iteration, env-specific config |
 | `eyre-rust` | `Report`, `WrapErr`, custom handlers, `eyre!`, anyhow migration |
 | `futures-util-rust` | `StreamExt`, `FutureExt`, `TryStreamExt`, `select!`, `join`, sinks |
+| `hotpath-rs` | Rust profiling: timing, allocations, CPU, Tokio, MCP |
 | `moka-rust` | `sync::Cache`, `future::Cache`, TTL/TTI, eviction, weighted |
 | `otel-rust-observable-handles` | Observable instruments, keep-alive pattern, sdk 0.27+ |
 | `opentelemetry-rust` | Traces, metrics, logs, OTLP, propagation, sampling |
