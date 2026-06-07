@@ -107,6 +107,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `eyre-rust` | `Report`, `WrapErr`, custom handlers, `eyre!`, anyhow migration |
 | `futures-util-rust` | `StreamExt`, `FutureExt`, `TryStreamExt`, `select!`, `join`, sinks |
 | `hotpath-rs` | Rust profiling: timing, allocations, CPU, Tokio, MCP |
+| `high_performance_rust` | Build config, allocators, type sizes, hashers, hot-path I/O, rayon, profiling |
 | `hud-tokio-profiler` | eBPF zero-instrumentation profiler for Tokio worker blocking; tool comparison |
 | `moka-rust` | `sync::Cache`, `future::Cache`, TTL/TTI, eviction, weighted |
 | `otel-observable-handles-rust` | Observable instruments, keep-alive pattern, sdk 0.27+ |
@@ -128,7 +129,9 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `rust-conventions` | Rust 2024 naming, ownership, error handling, traits, iterators, concurrency |
 | `rust-async-conventions` | Futures, Send/Sync, join/select, streams, pinning, cancellation |
 | `rust-wasm-conventions` | wasm-bindgen, wasm-pack, JS interop, binary size |
-| `design-patterns-rust` | Builder, Factory, Singleton, Newtype, Strategy, State, RAII |
+| `design-patterns-rust` | Idioms, GoF patterns (Builder/Strategy/State/RAII), anti-patterns, principles |
+| `cookbook_rust` | Task-to-crate recipe index: random, async, CLI, compression, db, regex, HTTP |
+| `macros_rust` | macro_rules! fragments/repetitions/hygiene, TT munchers, proc macros (syn/quote) |
 | `power-rust` | Prompt patterns that reduce LLM Rust bugs (versions, cancel-safety, SAFETY) |
 
 ### JavaScript / TypeScript — libs & tools

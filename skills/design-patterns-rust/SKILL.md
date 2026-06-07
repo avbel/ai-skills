@@ -1,9 +1,107 @@
 ---
 name: design-patterns-rust
-description: Design patterns adapted to idiomatic Rust — Builder, Factory, Singleton (OnceLock), Newtype, Adapter, Decorator, Composite, Strategy (traits/enums/closures), Command, Observer (channels), State (enum state machines), Typestate, RAII/Drop, Iterator, and trait-vs-enum dispatch trade-offs. Use when implementing or refactoring code that involves design patterns in Rust.
+description: Design patterns and idioms adapted to idiomatic Rust — the "social norm" idioms (borrowed args, Default, mem::take/replace, on-stack dynamic dispatch, temporary mutability, non_exhaustive, return-consumed-arg, closure capture), GoF patterns (Builder, Factory, Singleton, Newtype, Adapter, Decorator, Composite, Strategy, Command, Observer, State, Typestate, RAII, Iterator, Fold), anti-patterns (clone-to-appease, Deref polymorphism), trait-vs-enum dispatch, and core design principles (SOLID, composition-over-inheritance, DRY, KISS, LoD, CQS, POLA). Use when implementing or refactoring code that involves design patterns or idioms in Rust.
 ---
 
-Apply these patterns when designing or refactoring Rust code. Many GoF patterns translate differently in Rust due to ownership, enums, traits, and lack of inheritance.
+Apply these patterns when designing or refactoring Rust code. Many GoF patterns translate differently in Rust due to ownership, enums, traits, and lack of inheritance. Distilled from the *Rust Design Patterns* book (rust-unofficial/patterns): **idioms** are the community's social norms — break them only with a good reason; **patterns** solve recurring problems; **anti-patterns** look helpful but cause more problems. Always favor *why* you reach for a pattern over *how* to spell it.
+
+## IDIOMS (social norms)
+
+Foundational habits that make Rust code idiomatic. Prefer these before reaching for a named pattern.
+
+### Borrowed types for arguments
+
+Take the most general borrow. Prefer `&str` over `&String`, `&[T]` over `&Vec<T>`, `&T` over `&Box<T>` — callers with either form can pass in, and you avoid a layer of indirection.
+
+```rust
+fn count_words(text: &str) -> usize { text.split_whitespace().count() } // not &String
+```
+
+### Concatenate with `format!`
+
+For building a string from pieces, `format!` reads better than a chain of `push_str`/`+`. Use `push_str` only in a hot loop where the extra allocation matters.
+
+```rust
+let s = format!("{name} is {age} years old"); // not "..".to_string() + &name + ..
+```
+
+### The `Default` trait
+
+Implement (or `#[derive(Default)]`) `Default` for types with a sensible zero value, then use struct-update syntax to override a few fields. Enables `T::default()` in generic code and `..Default::default()` initialization.
+
+```rust
+#[derive(Default)]
+struct Config { retries: u32, verbose: bool, name: String }
+let c = Config { retries: 3, ..Default::default() };
+```
+
+### `mem::take` / `mem::replace` to mutate owned values behind `&mut`
+
+You can't move a field out of a `&mut` reference. `mem::take` (leaves `Default::default()`) and `mem::replace` (leaves a supplied value) let you take ownership without cloning — essential when transitioning enum variants in place.
+
+```rust
+fn a_to_b(e: &mut MyEnum) {
+    if let MyEnum::A { name, x: 0 } = e {
+        *e = MyEnum::B { name: std::mem::take(name) }; // moves name out, no clone
+    }
+}
+```
+
+### On-stack dynamic dispatch
+
+Bind differently-typed values to one `&mut dyn Trait` to get dynamic dispatch without a heap allocation. Since Rust 1.79 temporaries in `&`/`&mut` live long enough, so no deferred `let` bindings needed.
+
+```rust
+let readable: &mut dyn std::io::Read =
+    if arg == "-" { &mut std::io::stdin() } else { &mut std::fs::File::open(arg)? };
+// read from `readable` — no Box, no monomorphization of the code that follows
+```
+
+### Temporary mutability
+
+When data is mutated only during setup and read-only afterward, make that intent explicit by rebinding to an immutable binding (or use a nested block). The compiler then guarantees no later mutation.
+
+```rust
+let mut data = get_vec();
+data.sort();
+let data = data; // now immutable
+```
+
+### Iterating over `Option`
+
+`Option<T>` is `IntoIterator` (0 or 1 element) — use it directly with `.iter()`/`.extend()`/`chain()` instead of `if let`.
+
+```rust
+let mut names = vec!["a"];
+names.extend(maybe_name.as_ref()); // pushes 0 or 1 item
+```
+
+### Return the consumed argument on error
+
+If a fallible function moves an argument, hand it back inside the error so the caller can retry without cloning up front. The std library does this (`String::from_utf8` → `FromUtf8Error::into_bytes`).
+
+```rust
+pub struct SendError(String);
+pub fn send(value: String) -> Result<(), SendError> {
+    if ready() { Ok(()) } else { Err(SendError(value)) } // caller recovers `value`
+}
+```
+
+### Pass selected variables into a closure
+
+Closures capture the whole environment by borrow, or everything by `move`. To move/clone/borrow *specific* variables, rebind them in an enclosing block before the `move` closure.
+
+```rust
+let closure = {
+    let num2 = num2.clone();   // cloned
+    let num3 = num3.as_ref();  // borrowed
+    move || *num1 + *num2 + *num3 // num1 moved
+};
+```
+
+### `#[non_exhaustive]` for future-proof public types
+
+Mark public structs/enums/variants `#[non_exhaustive]` so downstream crates can't exhaustively match or struct-literal them — letting you add fields/variants later without a breaking change. Costs ergonomics (forces a wildcard arm), so reserve for genuinely evolving APIs.
 
 ## CREATIONAL PATTERNS
 
@@ -88,7 +186,7 @@ fn db() -> &'static Pool { DB.get().expect("DB not initialized") }
 static REGISTRY: LazyLock<Mutex<Vec<String>>> = LazyLock::new(|| Mutex::new(vec![]));
 ```
 
-Use sparingly — prefer dependency injection.
+A `static` requires its inner type to be `Sync`. For a *mutable* singleton you can't use bare `RefCell`/`Cell` (`!Sync`) — wrap state in `Mutex`/`RwLock` (as `REGISTRY` above) or use atomics. Use singletons sparingly — prefer dependency injection.
 
 ## STRUCTURAL PATTERNS
 
@@ -221,6 +319,18 @@ impl Database {
 
 Rust-specific — exists to satisfy the borrow checker.
 
+### Other Rust structural guidance
+
+- **Prefer small crates.** Split functionality into focused crates: faster parallel compilation, clear semver boundaries, and reuse. A crate should do one thing well.
+- **Contain `unsafe` in small modules.** Wrap unsafe code in a minimal, well-documented module/abstraction that exposes a safe API and upholds its invariants internally — so reviewers audit a small surface, not the whole crate. Every `unsafe` block carries a `// SAFETY:` note.
+- **Custom traits to avoid complex type bounds.** When several generic bounds repeat across functions, fold them into one marker/blanket trait so signatures read `T: MyTrait` instead of a long `where` list.
+
+```rust
+trait Storable: Serialize + DeserializeOwned + Send + 'static {}
+impl<T: Serialize + DeserializeOwned + Send + 'static> Storable for T {}
+fn save<T: Storable>(value: &T) { /* ... */ } // not a 4-bound where clause everywhere
+```
+
 ## BEHAVIORAL PATTERNS
 
 ### Strategy (Three Approaches)
@@ -268,29 +378,29 @@ let cmds: Vec<Box<dyn Fn()>> = vec![Box::new(|| println!("save"))];
 
 ### Observer (Channels)
 
+**Note on fan-out:** `std::sync::mpsc` is **multi-producer, single-consumer** — each event is delivered to exactly one receiver, so a plain `mpsc` channel models an event *queue* (one observer / worker pool), **not** broadcast-to-all-observers. For true Observer semantics (every observer sees every event) give each observer its own sender, or use a broadcast channel.
+
 ```rust
-use std::sync::mpsc;
+use std::sync::mpsc::{self, Sender};
 
 #[derive(Clone, Debug)]
 enum Event { PriceUpdate(f64), Trade { qty: u64 } }
 
-let (tx, rx) = mpsc::channel::<Event>();
-let tx2 = tx.clone(); // multiple producers
-
-// Observer thread
-std::thread::spawn(move || {
-    while let Ok(event) = rx.recv() {
-        match event {
-            Event::PriceUpdate(p) => println!("price={p}"),
-            Event::Trade { qty } => println!("traded {qty}"),
-        }
+// Subject keeps one Sender per registered observer → every observer gets every event.
+struct Subject { observers: Vec<Sender<Event>> }
+impl Subject {
+    fn subscribe(&mut self) -> mpsc::Receiver<Event> {
+        let (tx, rx) = mpsc::channel();
+        self.observers.push(tx);
+        rx
     }
-});
-
-tx.send(Event::PriceUpdate(42.0)).unwrap();
+    fn notify(&self, e: Event) {
+        for o in &self.observers { let _ = o.send(e.clone()); } // dropped observers error → ignore
+    }
+}
 ```
 
-For async: `tokio::sync::broadcast` for multi-consumer pub/sub.
+For real broadcast pub/sub prefer `tokio::sync::broadcast` (async, every receiver sees every message) or the `crossbeam-channel` crate; `std::sync::mpsc` alone cannot fan out.
 
 ### State — Enum State Machine
 
@@ -341,6 +451,22 @@ impl Iterator for Fibonacci {
 ```
 
 Lazy adaptors (`.map()`, `.filter()`, `.take()`) are zero-cost.
+
+### Fold
+
+**Intent:** Accumulate a result over a collection — the functional alternative to a mutable accumulator loop. For mapping an AST/recursive enum into a new structure, write per-variant folder functions instead of a Visitor.
+
+```rust
+let sum = (1..=100).fold(0, |acc, n| acc + n); // for a plain sum, `.sum()` is more idiomatic
+// fold shines when transforming an AST/recursive enum into a new structure:
+fn fold_expr(e: &Expr) -> Expr {
+    match e {
+        Expr::Num(n) => Expr::Num(*n),
+        Expr::Add(a, b) => Expr::Add(Box::new(fold_expr(a)), Box::new(fold_expr(b))),
+        Expr::Mul(a, b) => Expr::Mul(Box::new(fold_expr(a)), Box::new(fold_expr(b))),
+    }
+}
+```
 
 ### Template Method (Trait Default Methods)
 
@@ -549,3 +675,19 @@ fn total_area(shapes: &[Box<dyn ShapeTrait>]) -> f64 {
 | Chain of Resp. | `Vec<Box<dyn Fn>>` | Handler linked list |
 | Visitor | `match` on enum | Visitor + accept() |
 | RAII/Drop | `impl Drop` | Destructor / IDisposable |
+| Fold | `.fold()` / per-variant folders | Visitor-as-transform |
+
+## DESIGN PRINCIPLES
+
+Why-level guidance the patterns serve. In Rust these map onto traits, modules, and ownership.
+
+- **SOLID** — *SRP*: one reason to change per type. *OCP*: extend via new trait impls, don't edit existing code. *LSP*: trait impls must honor the trait's contract. *ISP*: many small traits beat one fat trait (`Read`/`Write` not `ReadWrite`). *DIP*: depend on traits (abstractions), inject concretions.
+- **Composition over inheritance (CRP)** — Rust has no inheritance; compose by embedding structs and delegating to traits. This is the default, not a workaround.
+- **DRY** — every piece of knowledge has one authoritative representation; factor shared logic into functions/traits/generics.
+- **KISS** — simplest design that works; avoid unnecessary generics, indirection, and premature abstraction. Pairs with **YAGNI** (don't build it until needed).
+- **Law of Demeter** — talk to immediate collaborators, not their internals (`a.do_x()` not `a.b().c().do_x()`); supports encapsulation.
+- **Encapsulation** — keep fields private, expose behavior through methods; modules gate visibility with `pub`.
+- **Command-Query Separation (CQS)** — a method either returns data *or* mutates state, not both; mirrors `&self` (query) vs `&mut self` (command).
+- **Design by Contract (DbC)** — state preconditions/postconditions/invariants; encode them in the type system (newtypes, typestate) where possible, `assert!`/`debug_assert!` otherwise.
+- **Principle of Least Astonishment (POLA)** — behave the way users expect; follow std naming/trait conventions (`Default`, `From`, `Iterator`) so APIs feel familiar.
+- **Single Choice** — exactly one module knows the exhaustive list of alternatives; centralize a closed set in one enum + `match` rather than scattering `if mode == ..` checks.
