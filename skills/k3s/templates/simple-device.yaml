@@ -1,0 +1,98 @@
+# Simple K3s edge-device scenario.
+# Replace app image, node label, and host device path before applying.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: edge-demo
+  labels:
+    # Host device access via hostPath is not allowed by baseline/restricted
+    # Pod Security Standards. Keep this namespace isolated and prefer a
+    # device plugin when available.
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sensor-gateway
+  namespace: edge-demo
+  labels:
+    app.kubernetes.io/name: sensor-gateway
+    app.kubernetes.io/component: edge-device
+    app.kubernetes.io/part-of: edge-demo
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sensor-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sensor-gateway
+        app.kubernetes.io/component: edge-device
+        app.kubernetes.io/part-of: edge-demo
+    spec:
+      # Label the node first, e.g.:
+      # kubectl label node edge-pi-01 device.serial=true
+      nodeSelector:
+        device.serial: "true"
+      containers:
+        - name: gateway
+          image: ghcr.io/example/sensor-gateway:1.0.0
+          imagePullPolicy: IfNotPresent
+          args: ["--device", "/dev/ttyUSB0", "--listen", "0.0.0.0:8080"]
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            # Many host devices are blocked by container device cgroups unless
+            # the container is privileged or the device is exposed by a device
+            # plugin. Prefer a device plugin for production edge fleets.
+            privileged: true
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: serial-device
+              mountPath: /dev/ttyUSB0
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: serial-device
+          hostPath:
+            path: /dev/ttyUSB0
+            type: CharDevice
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sensor-gateway
+  namespace: edge-demo
+  labels:
+    app.kubernetes.io/name: sensor-gateway
+spec:
+  selector:
+    app.kubernetes.io/name: sensor-gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

@@ -1,0 +1,339 @@
+# K3s app scenario: autoscaled web, separate worker services, CronJob,
+# shared in-cluster Valkey, and a common PVC for media/uploads.
+# Replace ghcr.io/example/* images before applying.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-demo
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shared-media
+  namespace: platform-demo
+spec:
+  # local-path is fine for single-node demos. For multi-node RWX, use NFS,
+  # Longhorn RWX, Ceph/Rook, or a managed file service StorageClass.
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: valkey-data
+  namespace: platform-demo
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: valkey
+  namespace: platform-demo
+  labels:
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/component: cache
+spec:
+  serviceName: valkey
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: valkey
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: valkey
+        app.kubernetes.io/component: cache
+    spec:
+      containers:
+        - name: valkey
+          image: valkey/valkey:8.0-alpine
+          args: ["valkey-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+          ports:
+            - name: valkey
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: valkey-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey
+  namespace: platform-demo
+spec:
+  selector:
+    app.kubernetes.io/name: valkey
+  ports:
+    - name: valkey
+      port: 6379
+      targetPort: valkey
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: platform-demo
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/component: frontend
+spec:
+  # Omit spec.replicas when an HPA owns scaling; otherwise GitOps/apply loops
+  # can reset the HPA's chosen replica count.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: web
+        app.kubernetes.io/component: frontend
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/example/web:1.0.0
+          env:
+            - name: VALKEY_URL
+              value: redis://valkey.platform-demo.svc.cluster.local:6379/0
+            - name: MEDIA_DIR
+              value: /media
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: database-url
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
+          volumeMounts:
+            - name: media
+              mountPath: /media
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: shared-media
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: platform-demo
+spec:
+  selector:
+    app.kubernetes.io/name: web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web
+  namespace: platform-demo
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email-worker
+  namespace: platform-demo
+  labels:
+    app.kubernetes.io/name: email-worker
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: email-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: email-worker
+        app.kubernetes.io/component: worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/example/worker:1.0.0
+          args: ["worker", "--queue", "email"]
+          env:
+            - name: VALKEY_URL
+              value: redis://valkey.platform-demo.svc.cluster.local:6379/1
+            - name: SMTP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: smtp-url
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-worker
+  namespace: platform-demo
+  labels:
+    app.kubernetes.io/name: image-worker
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: image-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: image-worker
+        app.kubernetes.io/component: worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/example/worker:1.0.0
+          args: ["worker", "--queue", "image"]
+          env:
+            - name: VALKEY_URL
+              value: redis://valkey.platform-demo.svc.cluster.local:6379/2
+            - name: MEDIA_DIR
+              value: /media
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: media
+              mountPath: /media
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: shared-media
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nightly-cleanup
+  namespace: platform-demo
+  labels:
+    app.kubernetes.io/name: nightly-cleanup
+    app.kubernetes.io/component: scheduled-task
+spec:
+  schedule: "17 3 * * *"
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 900
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: nightly-cleanup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cleanup
+              image: ghcr.io/example/worker:1.0.0
+              args: ["cleanup", "--older-than", "30d"]
+              env:
+                - name: VALKEY_URL
+                  value: redis://valkey.platform-demo.svc.cluster.local:6379/3
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: "1"
+                  memory: 512Mi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: valkey-allow-app-workers
+  namespace: platform-demo
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: valkey
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["frontend", "worker", "scheduled-task"]
+      ports:
+        - protocol: TCP
+          port: 6379
