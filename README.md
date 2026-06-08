@@ -106,6 +106,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `dotenvy-rust` | `.env` loading, override modes, iteration, env-specific config |
 | `eyre-rust` | `Report`, `WrapErr`, custom handlers, `eyre!`, anyhow migration |
 | `futures-util-rust` | `StreamExt`, `FutureExt`, `TryStreamExt`, `select!`, `join`, sinks |
+| `google-cloud-secret-manager-rust` | Secret Manager, ADC/IAM, versioned lookup |
 | `hotpath-rs` | Rust profiling: timing, allocations, CPU, Tokio, MCP |
 | `high_performance_rust` | Build config, allocators, type sizes, hashers, hot-path I/O, rayon, profiling |
 | `hud-tokio-profiler` | eBPF zero-instrumentation profiler for Tokio worker blocking; tool comparison |
@@ -147,6 +148,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `clickhouse-js` | MergeTree, schema, aggregates, materialized views, Node client |
 | `close-with-grace-js` | Graceful shutdown for servers, queues, workers, CLI daemons |
 | `duckdb-js` | SQL, complex types, window functions, Parquet/CSV I/O |
+| `google-cloud-secret-manager-js` | Secret Manager setup, ADC/IAM, rotation, typed lookup |
 | `opentelemetry-js` | OTel traces, metrics, SDK, auto-instrumentation, exporters |
 | `parquet-js` | File structure, encodings, compression, hyparquet, DuckDB |
 | `pino-js` | Log levels, child loggers, redaction, transports |
