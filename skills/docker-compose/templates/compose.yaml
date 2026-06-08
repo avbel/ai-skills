@@ -1,0 +1,96 @@
+# compose.yaml — baseline local stack (Compose Specification / Docker Compose v2)
+# Create new projects with this filename, not docker-compose.yml. Omit legacy `version:`.
+name: example-app
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    image: example/api:${APP_VERSION:-dev}
+    init: true
+    env_file:
+      - path: ./.env
+        required: false
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://app:app@db:5432/app
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_started
+    ports:
+      - target: 3000
+        published: ${API_PORT:-3000}
+        host_ip: 127.0.0.1
+        protocol: tcp
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - frontend
+      - backend
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore: [node_modules/, dist/]
+        - action: rebuild
+          path: package.json
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_DB: app
+    secrets:
+      - db_password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  adminer:
+    image: adminer:5
+    profiles: [debug]
+    ports:
+      - "127.0.0.1:8081:8080"
+    networks:
+      - backend
+
+networks:
+  frontend: {}
+  backend:
+    internal: true
+
+volumes:
+  db_data: {}
+  redis_data: {}
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt

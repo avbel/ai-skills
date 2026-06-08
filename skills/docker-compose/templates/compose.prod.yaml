@@ -1,0 +1,48 @@
+# compose.prod.yaml — hardened production-style override
+# Use with: docker compose -f compose.yaml -f compose.prod.yaml config
+services:
+  api:
+    build:
+      target: runtime
+    image: ghcr.io/example/api:${APP_VERSION:?set APP_VERSION}
+    read_only: true
+    init: true
+    user: "1000:1000"
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  db:
+    restart: unless-stopped
+    # Do not publish DB ports in production.
+    ports: []
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  backend:
+    internal: true

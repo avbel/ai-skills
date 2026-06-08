@@ -1,0 +1,32 @@
+# compose.dev.yaml — local developer override
+# Use with: docker compose -f compose.yaml -f compose.dev.yaml up --watch
+services:
+  api:
+    build:
+      target: development
+    command: npm run dev
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+    volumes:
+      - type: bind
+        source: .
+        target: /app
+      - type: volume
+        source: node_modules
+        target: /app/node_modules
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore: [node_modules/, dist/]
+        - action: rebuild
+          path: package.json
+
+  db:
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+
+volumes:
+  node_modules: {}

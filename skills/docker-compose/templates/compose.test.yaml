@@ -1,0 +1,38 @@
+# compose.test.yaml — one-shot test runner with ephemeral database
+# Use with: docker compose -f compose.test.yaml up --abort-on-container-exit --exit-code-from test
+name: example-app-test
+
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgres://test:test@db:5432/test
+    depends_on:
+      db:
+        condition: service_healthy
+    command: npm test
+    networks: [test]
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: test
+      # Plaintext is acceptable here only because this DB is tmpfs-backed,
+      # local, and exists solely for one-shot tests.
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: test
+    tmpfs:
+      - /var/lib/postgresql/data:size=512m
+    networks: [test]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+networks:
+  test: {}
