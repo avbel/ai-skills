@@ -107,10 +107,17 @@ Compression is applied **per page** (after encoding).
 
 ### hyparquet — Pure JS, Zero Dependencies
 
-Best for: lightweight reads, browser apps, smallest bundle (~10 KB).
+Best for: lightweight reads, browser apps, HTTP range fetches, plain JS objects.
 
 ```typescript
-import { asyncBufferFromFile, parquetReadObjects } from 'hyparquet'
+import {
+  asyncBufferFromFile,
+  asyncBufferFromUrl,
+  parquetMetadataAsync,
+  parquetQuery,
+  parquetReadObjects,
+  parquetSchema,
+} from 'hyparquet'
 
 const file = await asyncBufferFromFile('data.parquet')
 const rows = await parquetReadObjects({ file })
@@ -123,39 +130,50 @@ const subset = await parquetReadObjects({
   rowEnd: 100,
 })
 
+// Query/filter with row-group pruning from statistics
+const filtered = await parquetQuery({
+  file,
+  columns: ['name', 'score'],
+  filter: { score: { $gte: 90 }, country: { $eq: 'US' } },
+  useBloomFilters: true, // opt-in; helps $eq/$in when files contain bloom filters
+})
+
 // Metadata only
-import { parquetMetadataAsync, parquetSchema } from 'hyparquet'
 const metadata = await parquetMetadataAsync(file)
 const schema = parquetSchema(metadata)
 
 // From URL (browser, uses HTTP range requests)
-import { asyncBufferFromUrl } from 'hyparquet'
 const remoteFile = await asyncBufferFromUrl({
   url: 'https://example.com/data.parquet',
   requestInit: { headers: { Authorization: 'Bearer token' } },
 })
 ```
 
-Returns plain JS objects. Writing via separate `hyparquet-writer` package. Extra codecs via `hyparquet-compressors`.
+Returns plain JS objects. `parquetRead` streams via `onChunk` and `onPage`; `onPage` emits `pathInSchema: string[]`, not `columnName`. Writing via `hyparquet-writer` (`parquetWriteBuffer`, `parquetWriteFile`): specify types/schemas for empty or ambiguous columns; use per-column `bloomFilter` for equality filters. Extra codecs via `hyparquet-compressors` (gzip, brotli, LZ4, ZSTD, LZ4_RAW; LZO is not currently implemented).
 
 ### parquet-wasm — Rust/WASM, Arrow-native
 
 Best for: Arrow pipelines, full read/write, large files (~1.2 MB bundle).
 
 ```typescript
-import { readParquet, writeParquet, WriterPropertiesBuilder, Compression } from 'parquet-wasm/node'
+import { readParquet, writeParquet, WriterPropertiesBuilder, Compression, Table } from 'parquet-wasm/node'
 import { tableFromIPC, tableToIPC, tableFromArrays } from 'apache-arrow'
+import fs from 'node:fs'
 
 // Read
-const arrowIPC = readParquet(new Uint8Array(fs.readFileSync('data.parquet')))
-const table = tableFromIPC(arrowIPC)
+const wasmTable = readParquet(new Uint8Array(fs.readFileSync('data.parquet')))
+const table = tableFromIPC(wasmTable.intoIPCStream()) // consumes wasmTable
 
 // Write
 const data = tableFromArrays({ id: [1, 2, 3], name: ['a', 'b', 'c'] })
+const dataWasm = Table.fromIPCStream(tableToIPC(data, 'stream'))
 const props = new WriterPropertiesBuilder().setCompression(Compression.ZSTD).build()
-const parquetBytes = writeParquet(tableToIPC(data, 'stream'), props)
+const parquetBytes = writeParquet(dataWasm, props)
+dataWasm.free()
 fs.writeFileSync('out.parquet', parquetBytes)
 ```
+
+Use the ESM/browser entry (`parquet-wasm` or `parquet-wasm/esm`) only after `await initWasm()`; the Node entry initializes synchronously but still keeps Arrow tables in WASM memory until `free()`/`into*()` consumes them.
 
 ### @duckdb/node-api — SQL on Parquet
 
@@ -191,7 +209,7 @@ await conn.runAndReadAll(`SELECT * FROM 'data/**/*.parquet' LIMIT 100`)
 | Output | Plain JS objects | Arrow Tables | Arrow / rows |
 | Browser | Yes | Yes | No (use duckdb-wasm) |
 | SQL | No | No | Yes |
-| Predicate pushdown | No (row ranges only) | Partial | Full (automatic) |
+| Predicate pushdown | Row-group stats; opt-in bloom filters | Partial | Full (automatic) |
 | Dependencies | Zero | WASM binary | Native binary |
 
 ## Best Practices
@@ -203,7 +221,7 @@ await conn.runAndReadAll(`SELECT * FROM 'data/**/*.parquet' LIMIT 100`)
 5. **Always specify only needed columns** — unneeded columns are skipped on disk/network.
 6. **Use logical types** — always annotate primitives with their semantic type.
 7. **Partition large datasets** into multiple files by a key column (date, region) for file-level pruning.
-8. **For streaming large files**, use `onChunk` (hyparquet), `readParquetStream` (parquet-wasm), or `connection.stream()` (DuckDB) — avoid full materialization.
+8. **For streaming large files**, use `onChunk`/`onPage` (hyparquet), `readParquetStream` (parquet-wasm), or `connection.stream()` (DuckDB) — avoid full materialization.
 
 ## Type Mapping (JS)
 
