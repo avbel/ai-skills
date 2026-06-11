@@ -7,13 +7,20 @@ description: Tokio async runtime conventions — patterns, anti-patterns, module
 
 Apply these conventions when working with Tokio in Rust projects.
 
+## Version / Compatibility
+
+- Latest checked: Tokio `1.52.3` (2026-05-08), MSRV `1.71` from README/crates.io metadata.
+- Tokio `1.x` is stable, but MSRV may increase in minor releases. Use `tokio = "1"` for apps unless you intentionally pin.
+- If pinning a fixed minor, prefer an LTS line (`1.51.x` through March 2027; `1.47.x` through September 2026).
+- Unstable features (`tracing`, `io-uring`, `taskdump`) require both a Cargo feature and `--cfg tokio_unstable`; APIs may break in `1.x`.
+
 ## Patterns ✅
 
 | Pattern | Description |
 |---|---|
 | **Bounded channels** | Always prefer `mpsc::channel(cap)` over unbounded. Backpressure prevents OOM. |
 | **`std::sync::Mutex` for sync-only locks** | If the critical section has no `.await`, use `std::sync::Mutex`. It's cheaper than `tokio::sync::Mutex`. |
-| **`spawn_blocking` for CPU/blocking work** | CPU-heavy computation, blocking I/O, and sync library calls go in `spawn_blocking`. Never block an async task. |
+| **`spawn_blocking` for bounded blocking work** | Blocking I/O and sync library calls go in `spawn_blocking`. Limit CPU-heavy use with a `Semaphore` or use `rayon`; use dedicated threads for long-lived blocking loops. |
 | **`JoinSet` for task groups** | When spawning multiple related tasks, use `JoinSet` instead of collecting `JoinHandle`s manually. |
 | **`CancellationToken` for shutdown** | Cleaner than `watch::channel<bool>` for propagating cancellation. Supports hierarchical `child_token()`. |
 | **Cancel-safe futures in `select!`** | Prefer cancel-safe operations (`mpsc::recv`, `watch::changed`, `accept`) inside `select!` loops. |
@@ -41,21 +48,24 @@ Apply these conventions when working with Tokio in Rust projects.
 | **`.unwrap()` on `send` / `recv`** | Channel closure is a normal event (shutdown, consumer dropped). | Handle `Err` gracefully or use `send().await?` pattern. |
 | **`await`ing in a loop without `select!`** | `while let x = rx.recv().await` can't be interrupted (shutdown, timeout). | Wrap in `tokio::select!` with shutdown/timeout branch. |
 | **Large futures on the stack** | `async fn` captures all locals — large buffers blow the stack. | `Box::pin(future)` to heap-allocate, or use `Box<[u8]>` for large buffers. |
+| **`spawn_blocking` for long-lived workers** | Started blocking tasks cannot be aborted; runtime shutdown waits for them. | Use `std::thread::spawn` or a dedicated pool for persistent loops. |
+| **`TcpStream::set_linger` / `TcpSocket::set_linger`** | Deprecated: `SO_LINGER` can block the runtime thread on drop. | Avoid linger; use `set_zero_linger()` only when abortive close and data loss are intentional. |
 
 ## Tokio Modules Quick Reference
 
 | Module | Feature Flag | Purpose |
 |---|---|---|
 | `tokio::net` | `net` | Async TCP, UDP, Unix sockets. `TcpListener`, `TcpStream`, `UdpSocket`, `UnixListener`, `UnixStream`. |
-| `tokio::fs` | `fs` | Async filesystem ops (`read`, `write`, `create_dir_all`, `remove_file`, etc.). Internally uses `spawn_blocking`. Good for occasional I/O; don't use for high-throughput file streaming — prefer `spawn_blocking` with `std::fs` directly. |
+| `tokio::fs` | `fs` | Async filesystem ops (`read`, `write`, `create_dir_all`, `remove_file`, etc.). Internally uses `spawn_blocking`. Use only for ordinary files; special files like named pipes can hang shutdown — use `tokio::net::unix::pipe` or `AsyncFd`. |
 | `tokio::io` | `io-util`, `io-std` | `AsyncRead`/`AsyncWrite`/`AsyncBufRead` traits, `BufReader`/`BufWriter`, `copy`, `copy_bidirectional`, `split`, `duplex`, `stdin`/`stdout`/`stderr`. |
 | `tokio::sync` | `sync` | Async sync primitives: `Mutex`, `RwLock`, `Semaphore`, `Notify`, `Barrier`, `mpsc`, `oneshot`, `broadcast`, `watch`. |
 | `tokio::time` | `time` | `sleep`, `timeout`, `interval`, `Instant` (pausable in tests with `start_paused`). |
 | `tokio::task` | `rt` | `spawn`, `spawn_blocking`, `spawn_local`, `JoinSet`, `LocalSet`, `yield_now`, `block_in_place`, `coop` (cooperative yielding). |
 | `tokio::signal` | `signal` | `ctrl_c()`, Unix signals (`SIGTERM`, `SIGINT`, etc.), Windows signals. |
 | `tokio::process` | `process` | Async child process management (`Command`, `Child`, `ChildStdin`/`Out`/`Err`). |
-| `tokio::runtime` | `rt` | `Runtime` builder, `Handle`, `block_on`. Use `new_multi_thread()` or `new_current_thread()`. |
-| `tokio::tracing` | `tracing` | Integration with the `tracing` crate for structured logging/instrumentation. |
+| `tokio::runtime` | `rt` | `Runtime`, `LocalRuntime`, `Handle`, `block_on`. Use `new_multi_thread()` or `new_current_thread()`; use `LocalRuntime` for `!Send` tasks without `LocalSet`. |
+
+**Unstable diagnostics:** `runtime::dump`/task dumps require `taskdump` + `tokio_unstable` and are Linux-only. Tokio's `tracing` feature emits internal runtime traces; it is not a `tokio::tracing` module.
 
 **Companion crates:**
 
@@ -111,6 +121,8 @@ tokio = { version = "1", features = ["full"] }
 # Minimal practical set for network services. Add io-util, time, signal, fs as needed.
 # Use "full" while prototyping, then trim before release.
 # Note: io-std needed for stdin/stdout/stderr; process for async subprocesses.
+# Latest checked Tokio: 1.52.3; MSRV: Rust 1.71.
+# Unstable features (tracing/io-uring/taskdump) also need --cfg tokio_unstable.
 
 # Streams
 tokio-stream = "0.1"
@@ -152,7 +164,7 @@ rt.block_on(async { /* ... */ });
 let handle: JoinHandle<i32> = tokio::spawn(async move { 42 });
 let result = handle.await.unwrap();
 
-// spawn_blocking — for CPU-heavy or blocking I/O
+// spawn_blocking — for bounded blocking I/O/sync calls
 let result = tokio::task::spawn_blocking(|| {
     std::fs::read_to_string("big_file.txt")
 }).await.unwrap();
@@ -166,7 +178,7 @@ while let Some(res) = set.join_next().await {
     let val = res.unwrap();
 }
 
-// spawn_local — for !Send futures (requires LocalSet)
+// spawn_local — for !Send futures (requires LocalSet, or LocalRuntime on Tokio 1.51+)
 let local = tokio::task::LocalSet::new();
 local.run_until(async {
     tokio::task::spawn_local(async { /* !Send OK */ }).await.unwrap();
