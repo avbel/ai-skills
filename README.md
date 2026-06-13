@@ -36,15 +36,6 @@ pnpm dlx skills list avbel/ai-skills
 
 The installer auto-detects your agent and copies files to the right location. Pass `--agent` to override.
 
-#### Supported agents
-
-| Agent | `--agent` flag | Default install path |
-|-------|---------------|----------------------|
-| [Claude Code](https://claude.ai/code) | `claude-code` | `~/.claude/skills/` |
-| [Cursor](https://www.cursor.com) | `cursor` | `.cursor/rules/` |
-| [GitHub Copilot](https://github.com/features/copilot) | `copilot` | `.github/copilot-instructions.md` |
-| [Windsurf](https://windsurf.ai) | `windsurf` | `.windsurf/rules/` |
-| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `gemini` | `GEMINI.md` (appended) |
 
 ```bash
 # install for Cursor
