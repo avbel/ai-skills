@@ -176,6 +176,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 
 | Skill | Covers |
 |-------|--------|
+| `github-cli` | gh auth, repos, PRs, issues, runs, releases, API |
 | `github-actions-ci` | pnpm/Rust/Docker CI, workflow_dispatch, caching, flow validation |
 | `docker-compose` | compose.yaml, services, build/deploy/develop, networks, secrets |
 | `k3s` | lightweight Kubernetes, edge, workers, storage, autoscaling, secrets |
