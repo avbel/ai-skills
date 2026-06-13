@@ -111,6 +111,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `high_performance_rust` | Build config, allocators, type sizes, hashers, hot-path I/O, rayon, profiling |
 | `hud-tokio-profiler` | eBPF zero-instrumentation profiler for Tokio worker blocking; tool comparison |
 | `moka-rust` | `sync::Cache`, `future::Cache`, TTL/TTI, eviction, weighted |
+| `nanoprogress-rust` | Builder API, ticks, finalization, TTY/custom writers, thread sharing |
 | `otel-observable-handles-rust` | Observable instruments, keep-alive pattern, sdk 0.27+ |
 | `opentelemetry-rust` | Traces, metrics, logs, OTLP, propagation, sampling |
 | `reqwest-rust` | Async client, TLS, JSON/multipart, streaming, retries |
