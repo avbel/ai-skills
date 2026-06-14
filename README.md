@@ -126,6 +126,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | Skill | Covers |
 |-------|--------|
 | `rust-conventions` | Rust 2024 naming, ownership, error handling, traits, iterators, concurrency |
+| `rust-nightly` | Nightly feature gates, unstable std, -Z tooling, platforms |
 | `rust-async-conventions` | Futures, Send/Sync, join/select, streams, pinning, cancellation |
 | `rust-wasm-conventions` | wasm-bindgen, wasm-pack, JS interop, binary size |
 | `design-patterns-rust` | Idioms, GoF patterns (Builder/Strategy/State/RAII), anti-patterns, principles |
