@@ -1,4 +1,9 @@
+
 # ai-skills
+
+<p align="center">
+  <img src="logo.png" alt="ai-skills logo" width="500">
+</p>
 
 A curated collection of coding-convention skills for [Claude Code](https://claude.ai/code), [Codex](https://openai.com/index/openai-codex), [OpenCode](https://opencode.ai), [Gemini CLI](https://github.com/google-gemini/gemini-cli), [GitHub Copilot](https://github.com/features/copilot), [Cursor](https://www.cursor.com), and 50+ more agents. Each skill teaches your AI agent the idioms, patterns, and constraints of a specific library or language so you stop explaining the same things over and over.
 
