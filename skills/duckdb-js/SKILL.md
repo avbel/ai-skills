@@ -251,11 +251,14 @@ FROM monthly UNPIVOT (amount FOR month IN (COLUMNS(* EXCLUDE (id))));
 
 ## Node.js Client (`@duckdb/node-api`)
 
+Current stable package: `@duckdb/node-api` `1.5.3-r.3` (wraps released DuckDB binaries via `@duckdb/node-bindings`). It ships native packages for Linux glibc/musl (x64/arm64), macOS (x64/arm64), and Windows (x64/arm64).
+
 ```typescript
 import { DuckDBInstance } from '@duckdb/node-api'
 
 const db = await DuckDBInstance.create()          // in-memory
 // const db = await DuckDBInstance.create('my.duckdb')  // persistent
+// const db = await DuckDBInstance.fromCache('my.duckdb') // reuse per-process instance
 const conn = await db.connect()
 
 // Query
@@ -272,12 +275,25 @@ await conn.run(`COPY (SELECT * FROM 'input.csv') TO 'output.parquet'
 // Streaming large results
 const reader = await conn.streamAndReadAll(sql)
 
+// Parameterized SQL; values/types can be arrays or named objects
+const filtered = await conn.runAndReadAll(
+  'SELECT * FROM events WHERE user_id = $user_id AND ts >= $since',
+  { user_id: 'u_123', since: '2026-01-01' }
+)
+
 // Cross-database
 await conn.run(`INSTALL postgres; LOAD postgres;`)
 await conn.run(`ATTACH 'dbname=mydb' AS pg (TYPE postgres);`)
 ```
 
-Use `@duckdb/node-api` for new projects (async/await). Legacy `duckdb` package is callback-based.
+Use `@duckdb/node-api` for new projects (native Promises, DuckDB-specific API, lossless support for DuckDB types). Legacy `duckdb` is callback-based and SQLite-shaped.
+
+Operational patterns:
+- Use `DuckDBInstance.fromCache(path)` when multiple modules in the same Node process may open the same database file; multiple independent instances must not attach the same database.
+- Prefer `runAndReadAll()` for bounded results; use `streamAndReadUntil()` / `streamAndRead()` or async chunk iteration for large results.
+- For cooperative libuv behavior on long queries, prefer `startStreamThenRead*()` helpers; they combine pending results with streaming so work is split into short tasks without fully materializing the result.
+- Use `getRowsJson()` / `getRowObjectsJson()` when serializing results: BIGINT, DECIMAL, timestamps, INTERVAL, and nested types are converted losslessly for JSON.
+- Explicitly close long-lived resources (`connection.closeSync()` / `disconnectSync()`, `instance.closeSync()`) in daemons and tests instead of relying only on GC.
 
 ## Key Settings
 
