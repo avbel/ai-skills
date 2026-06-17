@@ -12,9 +12,10 @@ Primary source: OpenTelemetry JavaScript docs at `https://opentelemetry.io/docs/
 ## First Checks
 
 1. Identify module/runtime shape: CommonJS vs ESM, TypeScript runner (`tsx`, compiled JS, ts-node), package manager, Node version, and app entrypoint.
-2. Check whether instrumentation must run before any app imports. It almost always should.
-3. Prefer existing project logging/config/env conventions over inventing new wrappers.
-4. Keep production exporter endpoints, headers, and sampling in environment variables unless the repo already centralizes them in config code.
+2. The OTel JS SDK 2.x line (and `@opentelemetry/sdk-node` ≥ 0.200) requires Node `^18.19.0 || >=20.6.0`. Older Node 14/16/18.0–18.18 are unsupported — verify the runtime before debugging missing spans.
+3. Check whether instrumentation must run before any app imports. It almost always should.
+4. Prefer existing project logging/config/env conventions over inventing new wrappers.
+5. Keep production exporter endpoints, headers, and sampling in environment variables unless the repo already centralizes them in config code.
 
 ## Dependencies
 
@@ -269,6 +270,8 @@ Use code-level samplers only when the repo already keeps telemetry policy in cod
 - Creating spans without `finally { span.end(); }`.
 - High-cardinality metric attributes such as raw URL, user email, session token, or unbounded IDs.
 - Adding OTel logs by default while the JS logs signal is still in development.
+- Trusting inbound `baggage` headers at face value — core SDK caps processing at 8192 bytes (v2.8.0); reject or sanitize untrusted baggage before propagating it.
+- Targeting `BasicTracerProvider`/`NodeTracerProvider` for env-driven exporter or propagator config — that wiring moved to `NodeSDK` in JS SDK 2.x.
 
 ## Helper Script
 
