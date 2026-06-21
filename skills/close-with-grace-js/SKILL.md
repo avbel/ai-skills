@@ -194,7 +194,7 @@ t.after(() => {
 
 The package installs `process.once(...)` handlers for shutdown/error/exit events including:
 
-- `SIGINT`, `SIGTERM`, `SIGQUIT`, `SIGUSR2`.
+- `SIGHUP`, `SIGINT`, `SIGTERM`, `SIGQUIT`, `SIGUSR2`.
 - Fatal-ish signals such as `SIGILL`, `SIGTRAP`, `SIGABRT`, `SIGBUS`, `SIGFPE`, `SIGSEGV`.
 - `uncaughtException`, `unhandledRejection`, and `beforeExit`.
 
