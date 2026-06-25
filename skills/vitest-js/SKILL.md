@@ -10,8 +10,8 @@ Use these conventions for testing JavaScript/TypeScript projects with `vitest-de
 ## Source Baseline
 
 - Prefer official docs at `vitest.dev` and the matching GitHub release over older Jest-era snippets.
-- Current baseline checked for this skill: Vitest `4.1.6` (May 2026).
-- Vitest 4 requires **Vite ≥ 6.0.0** and **Node.js ≥ 20.0.0**.
+- Current stable baseline checked for this skill: Vitest `4.1.9` (June 2026). Vitest `5.0.0-beta.5` exists but is not the stable `latest` tag.
+- Vitest 4.1.9 supports **Vite `^6.0.0 || ^7.0.0 || ^8.0.0`** and **Node.js `^20.0.0 || ^22.0.0 || >=24.0.0`**.
 - Vitest is Vite-native: it reuses the project's Vite config, transforms, and resolvers — do not bolt Babel on top unless a transform is missing.
 - Vitest's `vi` API is Jest-compatible enough that most `jest.*` calls map 1:1 to `vi.*`, but the runtime, ESM handling, and mocking semantics differ — do not assume Jest behavior.
 
@@ -30,10 +30,10 @@ pnpm add -D @vitest/coverage-v8 jsdom @testing-library/jest-dom
 For browser mode:
 
 ```bash
-pnpm add -D vitest @vitest/browser playwright
+pnpm add -D vitest @vitest/browser-playwright
 ```
 
-Note: in Vitest 4 the runtime API is exported from `vitest/browser`, but `@vitest/browser` is still the installed package that provides the providers.
+Note: in Vitest 4 the runtime API is exported from `vitest/browser`. Install a provider package such as `@vitest/browser-playwright`, `@vitest/browser-webdriverio`, or `@vitest/browser-preview`; the old `@vitest/browser/context` and `@vitest/browser/utils` entry points are transitional and should be migrated to `vitest/browser`.
 
 ## package.json Scripts
 
@@ -306,12 +306,13 @@ export default defineConfig({
 
 ```ts
 import { defineConfig } from 'vitest/config';
+import { playwright } from '@vitest/browser-playwright';
 
 export default defineConfig({
   test: {
     browser: {
       enabled: true,
-      provider: { name: 'playwright' }, // object, not string, in v4
+      provider: playwright(),
       instances: [{ browser: 'chromium' }],
       headless: true,
     },
@@ -319,7 +320,7 @@ export default defineConfig({
 });
 ```
 
-- In Vitest 4 the `browser.provider` field accepts an object instead of a string.
+- In Vitest 4.1 use the provider helper (`playwright()`, `webdriverio()`, or `preview()`) from the matching provider package; do not use the old string form (`provider: 'playwright'`).
 - Import test APIs from `vitest/browser` for browser-specific helpers like `userEvent`.
 - Use `browser.testerHtmlPath` to customize the tester HTML — `browser.testerScripts` was removed in v4.
 
