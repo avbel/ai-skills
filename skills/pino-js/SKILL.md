@@ -1,9 +1,14 @@
 ---
 name: pino-js
-description: Pino logger conventions — log levels, child loggers, serializers, redaction, transports, destinations, formatters, and web framework integration. Use when writing or modifying logging code that imports 'pino' in js (node.js, bun) projects.
+description: Pino logger conventions — log levels, child loggers, serializers, redaction, transports, destinations, formatters, and web framework integration. Use when writing or modifying logging code that imports 'pino' in JavaScript/Node.js projects.
 ---
 
 Apply these conventions when working with pino logging code.
+
+## Compatibility
+- Current stable checked: Pino `10.3.1`.
+- Pino 10 dropped Node.js 18 support. For Node.js 18 applications, stay on the Pino 9 line unless the runtime can be upgraded.
+- Official runtimes are Node.js, Bare, and Pear; browser usage has a separate API surface. Bundlers must emit Pino worker/transport support files separately.
 
 ## Logger Creation
 - Create with `pino(options, destination)`. Both arguments are optional.
@@ -17,12 +22,14 @@ Apply these conventions when working with pino logging code.
 - Pass the object first, message second: `logger.info({ userId: 123 }, 'user logged in')` — not the other way around.
 - Check level before expensive work: `if (logger.isLevelEnabled('debug')) { ... }`.
 - Custom levels: `customLevels: { audit: 35 }`. Use `useOnlyCustomLevels: true` to disable built-in levels.
+- Use `levelComparison: 'ASC' | 'DESC' | (current, expected) => boolean` only when custom level ordering is required; ensure downstream transports understand the custom levels.
 
 ## Child Loggers
 - Create with `logger.child({ module: 'auth' })` — bindings are included in every log from the child.
 - Child loggers inherit parent serializers and level unless overridden.
 - Pass options as the second argument: `logger.child({ module: 'auth' }, { level: 'debug', msgPrefix: '[auth] ' })`.
 - Creating children is cheap (~259ms for 10,000). Prefer creating a child per module/request over passing context manually.
+- Use `logger.setBindings({ key })` only for process-wide/static context changes after creation; prefer `child()` for scoped context.
 
 ## Serializers
 - Define in `serializers` option: `{ req: (req) => ({ method: req.method, url: req.url }) }`.
@@ -37,6 +44,7 @@ Apply these conventions when working with pino logging code.
 - Path syntax: dot notation (`a.b.c`), bracket notation for hyphens (`a["x-key"]`), wildcards (`a[*].b`).
 - Wildcard redaction has ~50% overhead — prefer explicit paths when possible.
 - Never derive redaction paths from user input — paths are compiled using dynamic code evaluation internally, which is a code injection risk.
+- Do not pass untrusted objects directly as `logger.info(untrusted)` or `logger.child(untrusted)`: top-level keys can collide with `level`, `time`, `msg`, bindings, or security fields. Wrap under an application-controlled key: `logger.info({ untrusted }, '...')`.
 
 ## Transports (Worker Thread)
 - Transports run in a separate worker thread to avoid blocking the main thread.
@@ -56,6 +64,11 @@ Apply these conventions when working with pino logging code.
 - Built-in file transport: `target: 'pino/file'` with `options: { destination, mkdir, append }`.
 - Transport options are serialized via Structured Clone — only JSON-compatible values.
 - Transports start asynchronously. Use `transport.on('ready', ...)` if you need to ensure logs flush before exit.
+- Single `target` or single `pipeline`: only `logger.level` filters logs; a `transport.level` is not applied.
+- Multiple `targets`: `logger.level` is the first gate, then each `targets[i].level` filters again; missing target levels default to `info`.
+- With multiple `targets`, keep the numeric `level` field intact. Do not use `formatters.level` to rename `level` or convert it to a string before routing; transform level labels in a pipeline/custom transport after routing.
+- For synchronous transport writes, pass `sync: true` to the transport options; this trades throughput for lower loss risk.
+- Pino sanitizes invalid `NODE_OPTIONS` preloads for transport workers, but avoid initializing transports in recursive preload paths unless tested.
 
 ## Custom Transports
 - Use `pino-abstract-transport` as the base:
@@ -74,6 +87,7 @@ Apply these conventions when working with pino logging code.
   ```
 - Always implement `close()` to prevent log loss on shutdown.
 - Transport files must be ESM (`.mjs`) or CommonJS — referenced by path or package name.
+- TypeScript transports are supported on Node.js 22.6+ type stripping. Prefer `.mts`; Node.js 22.6–22.17 needs `--experimental-strip-types`, while Node.js 22.18+ and 24+ enable type stripping by default.
 
 ## Destinations
 - `pino.destination(path)` — creates a high-throughput SonicBoom destination for file output.
@@ -95,13 +109,14 @@ Apply these conventions when working with pino logging code.
 - Use `formatters.level` to emit `"level": "info"` instead of `"level": 30`.
 
 ## Timestamps
-- Built-in functions: `pino.stdTimeFunctions.epochTime` (default), `unixTime`, `isoTime`, `nullTime`.
+- Built-in functions: `pino.stdTimeFunctions.epochTime` (default), `unixTime`, `isoTime`, `isoTimeNano`, `nullTime`.
 - ISO timestamps: `timestamp: pino.stdTimeFunctions.isoTime`.
 - Disable: `timestamp: false`.
 
 ## Mixin
 - Inject dynamic properties into every log: `mixin: () => ({ traceId: getTraceId() })`.
 - Called on every log operation — keep it fast.
+- Return a fresh object from `mixin()`; Pino mutates the returned object during merge for performance.
 - Control merge order with `mixinMergeStrategy`.
 
 ## Hooks
@@ -113,9 +128,16 @@ Apply these conventions when working with pino logging code.
 - Per-stream level filtering: `pino.multistream([{ stream: dest1, level: 'info' }, { stream: dest2, level: 'error' }])`.
 - Prefer `transport.targets` over `multistream` in new code — transports run off the main thread.
 
+## Diagnostics
+- Subscribe to Node diagnostics/tracing channel events `tracing:pino_asJson:start` and `tracing:pino_asJson:end` only for library-level instrumentation; they expose serialization arguments/results and can be high volume.
+
 ## Web Framework Integration
 - **Fastify:** Built-in. Set `logger: true` or pass a pino options object. Access via `request.log` / `reply.log`.
 - **Express/Koa/Hapi:** Use `pino-http`, `koa-pino-logger`, or `hapi-pino` middleware. Access via `req.log` / `ctx.log`.
+- **Restify / Node `http`:** Use `restify-pino-logger` or `pino-http`.
+- **Nest:** Use `nestjs-pino`.
+- **H3:** Use `pino-http` through H3 `fromNodeMiddleware`.
+- **Hono:** Use `@hono/structured-logger` with a root `pino()` logger and per-request child loggers.
 - Framework loggers automatically bind request ID and request metadata to child loggers.
 
 ## AWS Lambda
@@ -129,6 +151,6 @@ Apply these conventions when working with pino logging code.
 
 ## Performance
 - Do not use string interpolation for log messages — pass objects as the first argument and let pino serialize.
-- Avoid `JSON.stringify` before logging — pino handles serialization internally with `fast-json-stringify`.
+- Avoid `JSON.stringify` before logging — pino handles serialization internally.
 - Default config achieves best stdout performance. Async destinations add throughput but risk data loss.
 - `pino-debug` provides 10-20x performance improvement over the `debug` module.
