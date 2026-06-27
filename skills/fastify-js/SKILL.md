@@ -6,7 +6,9 @@ description: Fastify 5 web application conventions — plugin encapsulation, rou
 Apply these conventions when working with Fastify code in node.js projects.
 
 ## Server Setup
+- Fastify 5 targets Node.js 20+. Do not write guidance that assumes Node 18 compatibility for new Fastify 5 apps.
 - Create the Fastify instance with explicit options: `logger: true` (or Pino config object), `trustProxy` when behind a reverse proxy.
+- Set `requestTimeout` when exposed without a reverse proxy; use `handlerTimeout` for application-level route lifecycle timeouts and pass `request.signal` into cancellable work.
 - Separate app construction (`app.ts`) from server startup (`server.ts` / `cluster.ts`) to enable testing via `inject()` without starting the server.
 
 ## Plugins & Encapsulation
@@ -19,8 +21,11 @@ Apply these conventions when working with Fastify code in node.js projects.
 ## Routes
 - Use shorthand methods: `fastify.get()`, `fastify.post()`, etc.
 - Always use `async` handlers that `return` the response body. Do not mix `return` with `reply.send()` — pick one.
+- If an async handler or hook must call `reply.send()` later/outside the promise chain, `return reply` or `await reply` to avoid duplicate execution/race conditions.
 - Group related routes in a plugin and apply a `prefix` via `register` options.
+- Do not wrap route plugins directly with `fastify-plugin` when relying on `register(..., { prefix })`; `fastify-plugin` makes Fastify-specific register options like `prefix` no-op.
 - Use route-level `schema` for request validation (`body`, `querystring`, `params`, `headers`) and response serialization (`response`).
+- Prefer route-level `handlerTimeout` for slow endpoints instead of only socket timeouts; timeout errors use code `FST_ERR_HANDLER_TIMEOUT` and async work must observe `request.signal` to stop cooperatively.
 
 ## Validation & Serialization
 - Define JSON Schema (Draft 7) on every route for `body`, `querystring`, `params`, and `response`.
@@ -28,6 +33,8 @@ Apply these conventions when working with Fastify code in node.js projects.
 - Always define `response` schemas — they enable `fast-json-stringify` for serialization performance and prevent accidental leaking of internal fields.
 - Default Ajv settings: `removeAdditional: true`, `useDefaults: true`, `coerceTypes: 'array'`. Be aware that coercion can interact unexpectedly with `anyOf`/nullable types.
 - Never pass user-provided schemas to the validator — the compiler uses dynamic code evaluation internally.
+- Validation only runs automatically for `application/json` bodies unless `schema.body.content` maps content types explicitly. When adding custom content-type parsers, enumerate every accepted content type in `content` or use a catch-all body schema.
+- Custom validators must return `{ value }` or `{ error }`; do not throw from validator functions, especially when async `preValidation` hooks are present.
 
 ## TypeScript
 - Use a Type Provider (`@fastify/type-provider-typebox` or `@fastify/type-provider-json-schema-to-ts`) to derive request/reply types from route schemas automatically.
@@ -50,6 +57,7 @@ Apply these conventions when working with Fastify code in node.js projects.
 ## Error Handling
 - Set a custom error handler with `fastify.setErrorHandler(async (error, request, reply) => { ... })`.
 - Error handlers are encapsulated — each plugin can define its own. Errors bubble to the nearest ancestor handler.
+- Avoid calling `setErrorHandler` multiple times in the same scope; Fastify 5 warns that `allowErrorHandlerOverride` defaults to `true` now but will default to `false` in the next major release.
 - Always throw `Error` instances, never primitives. Fastify's built-in errors use `FST_` prefixed codes (e.g., `FST_ERR_VALIDATION`).
 - Validation errors have `error.validation` (raw errors) and `error.validationContext` (`body`, `params`, `query`, `headers`).
 - If a custom error handler throws, the parent error handler catches it (triggered only once to prevent loops).
@@ -62,4 +70,5 @@ Apply these conventions when working with Fastify code in node.js projects.
 ## Performance
 - Define `response` schemas on all routes for serialization speed.
 - Set appropriate `bodyLimit` per route for large/small payloads instead of raising the global limit.
-- Use `disableRequestLogging: true` on high-throughput routes where request logs are not needed.
+- Use `disableRequestLogging: true` or a predicate function for high-throughput/noisy routes where request logs are not needed.
+- Avoid multi-parameter and RegExp-heavy hot-path routes; static routes are fastest, then single-param routes.
