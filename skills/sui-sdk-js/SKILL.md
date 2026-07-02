@@ -18,7 +18,7 @@ Primary source: Mysten Labs Sui TypeScript SDK docs at `https://sdk.mystenlabs.c
 - Use `@mysten/sui` v2+ docs and imports.
 - The SDK is ESM-only. Ensure `package.json` has `"type": "module"` and TypeScript uses `moduleResolution` compatible with ESM, such as `NodeNext`, `Node16`, or `Bundler`.
 - Prefer modular subpath imports like `@mysten/sui/grpc`, `@mysten/sui/transactions`, `@mysten/sui/keypairs/ed25519`, `@mysten/sui/bcs`, and `@mysten/sui/utils`.
-- For new code, prefer `SuiGrpcClient` and the transport-agnostic `client.core` API.
+- For new code, prefer `SuiGrpcClient` and the transport-agnostic `client.core` API. In reusable code, accept `ClientWithCoreApi` and call `client.core.*` even when native clients expose shortcuts.
 - **JSON-RPC is deprecated and will be decommissioned. Never introduce `SuiJsonRpcClient` code. Migrate existing JSON-RPC usage to gRPC or GraphQL.**
 - Public Mysten fullnode endpoints are rate-limited (100 requests per 30 seconds). Production apps should use dedicated nodes or a provider endpoint.
 
@@ -66,6 +66,8 @@ export async function loadObject(client: ClientWithCoreApi, objectId: string) {
   return object;
 }
 ```
+
+Use `SuiClientTypes` from `@mysten/sui/client` for Core API option and response types when typing library boundaries.
 
 Use native service APIs only when the Core API cannot express the query or operation.
 
@@ -237,6 +239,26 @@ if (coinMetadata) {
 
 All balance values are returned as strings. Use `BigInt(balance.balance)` for arithmetic.
 
+### Direct Address-Balance Withdrawals
+
+Use `tx.withdrawal()` only when you deliberately want a direct `FundsWithdrawal` input. It is the offline-friendly primitive behind address-balance redemption; `tx.coin()` / `tx.balance()` are still preferred for normal online builds because they resolve from both coin objects and address balances.
+
+```ts
+const [coin] = tx.moveCall({
+  target: '0x2::coin::redeem_funds',
+  typeArguments: ['0x2::sui::SUI'],
+  arguments: [tx.withdrawal({ amount: 1_000_000_000n })],
+});
+
+tx.transferObjects([coin], '0xRecipientAddress');
+
+const [balance] = tx.moveCall({
+  target: '0x2::balance::redeem_funds',
+  typeArguments: ['0xPackageId::module::USDC'],
+  arguments: [tx.withdrawal({ amount: 1_000_000n, type: '0xPackageId::module::USDC' })],
+});
+```
+
 ### Manual Coin Operations
 
 ```ts
@@ -358,14 +380,22 @@ const simResult = await client.core.simulateTransaction({
   include: { effects: true, balanceChanges: true, commandResults: true },
 });
 
+// Disable full validation only for inspection workflows such as non-entry Move functions
+const uncheckedSim = await client.core.simulateTransaction({
+  transaction: tx,
+  checksEnabled: false,
+  include: { commandResults: true },
+});
+
 // Get transaction by digest
 const txResult = await client.core.getTransaction({
   digest: 'ABC123...',
   include: { effects: true, events: true, transaction: true },
 });
 
-// Wait for indexing
+// Wait for indexing by digest or by an execution result
 await client.core.waitForTransaction({ digest: 'ABC123...', timeout: 60_000 });
+await client.core.waitForTransaction({ result: executeResult, include: { effects: true } });
 ```
 
 Transaction `include` options: `effects`, `events`, `transaction`, `balanceChanges`, `objectTypes`, `bcs`. Simulation also supports `commandResults`.
@@ -405,6 +435,8 @@ const { type } = await client.core.mvr.resolveType({
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Secp256k1Keypair } from '@mysten/sui/keypairs/secp256k1';
 import { Secp256r1Keypair } from '@mysten/sui/keypairs/secp256r1';
+import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
+import { fromHex } from '@mysten/sui/utils';
 
 // Random keypair
 const keypair = new Ed25519Keypair();
@@ -415,11 +447,19 @@ const keypair = Ed25519Keypair.fromSecretKey(secretKey);
 // From mnemonic
 const keypair = Ed25519Keypair.deriveKeypair(mnemonic);
 
+// Decode when the bech32 scheme is unknown
+const decoded = decodeSuiPrivateKey('suiprivkey1...');
+
+// From hex-encoded raw secret
+const keypairFromHex = Ed25519Keypair.fromSecretKey(fromHex('0x...'));
+
 const address = keypair.toSuiAddress();
 ```
 
+Use `getSecretKey()` to export a keypair as a Bech32 `suiprivkey...`; use `encodeSuiPrivateKey(rawBytes, scheme)` when converting raw private-key bytes.
+
 Supported schemes:
-- `Ed25519Keypair` from `@mysten/sui/keypairs/ed2519`
+- `Ed25519Keypair` from `@mysten/sui/keypairs/ed25519`
 - `Secp256k1Keypair` from `@mysten/sui/keypairs/secp256k1`
 - `Secp256r1Keypair` from `@mysten/sui/keypairs/secp256r1`
 - `PasskeyKeypair` from `@mysten/sui/keypairs/passkey`
@@ -495,17 +535,24 @@ const result = await keypair.signAndExecuteTransaction({
 });
 ```
 
-Core transaction commands:
+Core transaction commands and inputs:
 - `tx.splitCoins(coin, amounts)` — creates coins from an existing coin or `tx.gas`
 - `tx.mergeCoins(destinationCoin, sourceCoins)` — merges coins into one
 - `tx.transferObjects(objects, address)` — transfers objects
-- `tx.moveCall({ target, arguments, typeArguments })` — calls a Move function
+- `tx.moveCall({ target, arguments, typeArguments })` — calls a Move function; `package`, `module`, and `function` can be passed separately instead of `target`
+- `tx.makeMoveVec({ elements, type? })` — creates a vector of object inputs for Move calls
+- `tx.publish({ modules, dependencies })` and `tx.upgrade({ modules, dependencies, package, ticket })` — publish or upgrade Move packages
 - `tx.coin({ balance, type?, useGasCoin? })` — produces a `Coin<T>` intent
 - `tx.balance({ balance, type?, useGasCoin? })` — produces a `Balance<T>` intent
-- `tx.pure.address()`, `tx.pure.u64()`, `tx.pure.string()`, etc. — pure value inputs
-- `tx.object(objectId)` — object reference input
+- `tx.withdrawal({ amount, type? })` — produces a direct address-balance withdrawal for `coin::redeem_funds` / `balance::redeem_funds`
+- `tx.pure.address()`, `tx.pure.u64()`, `tx.pure.vector()`, `tx.pure.option()`, `tx.pure('vector<u8>', value)`, etc. — pure value inputs
+- `tx.object(objectId)` — object reference input resolved at build time
+- `tx.objectRef()`, `tx.sharedObjectRef()`, and `tx.receivingRef()` — fully resolved owned/immutable, shared/party, and receiving object inputs for offline builds
+- `tx.object.system()`, `tx.object.clock()`, `tx.object.random()`, `tx.object.denyList()`, and `tx.object.option()` — system object and object-option helpers
 
 Use `bigint` for MIST and large integer values. Avoid JavaScript `number` for on-chain balances.
+
+When a command returns multiple values, use destructuring or indexing (`const [coin] = ...`, `result[0]`). Never spread a transaction result or pass it to `Array.from()`; the docs warn that this causes an infinite loop.
 
 ### Move Calls
 
@@ -585,10 +632,12 @@ tx.setSender(sender);
 tx.setGasPrice(referenceGasPrice);
 tx.setGasBudget(50_000_000);
 tx.setGasPayment([{ objectId, version, digest }]);
-tx.object({ objectId, version, digest });
+tx.objectRef({ objectId, version, digest });
 
 const bytes = await tx.build();
 ```
+
+For offline transactions with no owned object inputs (only shared/party objects and address-balance withdrawals), use `tx.withdrawal()`, `tx.sharedObjectRef()` for shared or party objects, `tx.setGasPayment([])`, and set an expiration (`tx.setExpiration({ ValidDuring: ... })`) because no gas coin/object version anchors the transaction.
 
 ### Sponsored Transactions
 
@@ -688,19 +737,27 @@ import {
   parseToMist,
   toBase64,
   SUI_DECIMALS,
+  SUI_ADDRESS_LENGTH,
+  MOVE_STDLIB_ADDRESS,
+  SUI_FRAMEWORK_ADDRESS,
+  SUI_SYSTEM_ADDRESS,
   SUI_CLOCK_OBJECT_ID,
   SUI_SYSTEM_STATE_OBJECT_ID,
+  SUI_RANDOM_OBJECT_ID,
   formatDigest,
   normalizeStructTag,
+  normalizeSuiObjectId,
+  normalizeSuiNSName,
   parseToUnits,
   isValidSuiObjectId,
   isValidTransactionDigest,
+  isValidSuiNSName,
   fromHex,
   toHex,
 } from '@mysten/sui/utils';
 ```
 
-Validate address and object ID shape at boundaries — validators do not prove on-chain existence.
+Validate address, object ID, digest, and SuiNS shapes at boundaries — validators do not prove on-chain existence.
 
 ## Faucet
 
