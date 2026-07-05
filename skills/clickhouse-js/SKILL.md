@@ -155,17 +155,20 @@ SELECT * FROM source FINAL  -- useful for dedup
 
 ## Node.js Client (`@clickhouse/client`)
 
+**Compatibility:** `@clickhouse/client` 1.23.x requires Node.js `>=20` and supports maintained Node 20/22/24/26. Client 1.12.0+ targets ClickHouse 24.8+; older servers are best-effort.
+
 ```typescript
 import { createClient } from '@clickhouse/client'
 
 const client = createClient({
-  url: 'http://localhost:8123',
-  username: 'default',
-  password: '',
+  url: process.env.CLICKHOUSE_URL ?? 'http://localhost:8123',
+  username: process.env.CLICKHOUSE_USER ?? 'default',
+  password: process.env.CLICKHOUSE_PASSWORD ?? '',
   database: 'default',
   max_open_connections: 10,
   request_timeout: 30_000,
-  compression: { request: true, response: true },
+  compression: { request: { codec: 'gzip' }, response: true },
+  use_multipart_params_auto: true,
   clickhouse_settings: { async_insert: 1 },
 })
 ```
@@ -198,10 +201,16 @@ await client.command({
 ```
 
 **Key rules:**
-- Consume `ResultSet` promptly — it holds the HTTP connection open.
+- Consume or dispose `ResultSet` promptly — it holds the HTTP connection open. With TS 5.2+/supported runtimes, `using resultSet = await client.query(...)` auto-disposes on scope exit.
 - Use `query_params` with `{name:Type}` placeholders, never string interpolation.
+- For large `query_params` (large `IN` arrays, embeddings), enable `use_multipart_params_auto`; force `use_multipart_params` only when needed.
 - Use `format` option, not `FORMAT` clause in SQL.
 - `await client.close()` on shutdown.
+- Node compression: `true` means gzip; `{ codec: 'br' }` enables Brotli; `{ codec: 'zstd' }` requires Node `>=22.15.0`. `@clickhouse/client-web` rejects zstd and does not support streaming inserts.
+- Do not import from deprecated `@clickhouse/client-common`; import public types from `@clickhouse/client` or `@clickhouse/client-web`. Use `ClickHouseSettingsInterface` for settings helpers shared across Node/Web clients.
+- `parseColumnType` is deprecated; use `@clickhouse/datatype-parser` (`parseDataType`) for ClickHouse type-string AST parsing.
+- For RowBinary hot paths, prefer `@clickhouse/rowbinary`; the client package also ships RowBinary agent skills under `node_modules/@clickhouse/client/skills/`.
+- Pass a raw OpenTelemetry tracer via `tracer` when you need spans; the client has no OTel dependency and tracer exceptions are not swallowed.
 - For browser/edge: use `@clickhouse/client-web` (same API, no streaming inserts).
 
 ## Schema Design
