@@ -69,6 +69,24 @@ Check the diff — not the whole codebase — against this list. A security find
 
 **Escalate** beyond this pass when the diff touches auth flows, session handling, crypto, payments, sandboxing, or file upload handling: run the platform's dedicated security review (`/security-review` in Claude Code) or a security-focused second opinion (step 4 with the hint "adversarial security review"), and say in the verdict that you did.
 
+### 3c. Embedded-language check
+
+Code inside strings gets zero help from the host language's compiler — a typo in embedded SQL/HTML/GraphQL passes typecheck and fails at runtime. For every string in the diff containing another language (SQL, HTML, GraphQL, regex, shell, CSS, JSON, XPath):
+
+**Validate the syntax, don't eyeball it.** In order of preference:
+1. **Execute against the real engine** — prepare the SQL on the local/test database (`PREPARE q AS <query>` in Postgres parses *and* type-checks without running), parse GraphQL with the project's graphql lib, compile the regex in a REPL, render the template.
+2. **Run a linter/parser** if available: `sqlfluff`/`pgsql-parser` (SQL), `graphql validate` against the schema, HTML validator.
+3. Only as a last resort, manual parse: matched quotes/parens, correct placeholder count and order (`$1..$n` vs args passed), keywords in valid positions.
+
+**Cross-boundary consistency:** placeholder count matches the argument list; column names/types match the current schema (check migrations in the same diff); GraphQL fields exist in the schema; HTML ids/classes referenced from JS/CSS actually exist.
+
+**Postgres-specific traps (check every SQL string):**
+- **Missing explicit casts on parameters.** Drivers send parameters as `unknown`/text; anything non-obvious needs a cast in the SQL: `$1::uuid`, `$1::jsonb`, `$1::timestamptz`, `= ANY($1::text[])`, and **enum comparisons** — `status = $1::my_schema.order_status`, never a bare `status = $1`. Also literal-to-enum: `'active'::my_schema.order_status`.
+- **Unqualified custom types.** Enums, domains, and composite types must be schema-qualified everywhere they appear — casts, `CREATE TABLE` columns, function signatures, migrations: `my_schema.my_enumeration`, not `my_enumeration`. A bare name only works while `search_path` happens to include the schema — it differs between the app, migration runner, `psql`, and pg_dump/restore, so this breaks exactly where it wasn't tested. Same rule for functions and tables outside `public` when `search_path` isn't guaranteed.
+- `NULL` handling in comparisons (`= NULL` instead of `IS NULL`), and `IN ($1)` with an array argument instead of `= ANY($1)`.
+
+**Tie-in with `dev-testing`:** every embedded SQL/GraphQL string changed in the diff must be executed by at least one integration test against the real engine (in-memory/testcontainer) — that's the only durable guard for embedded-language errors. An untested new query is a missing edge-case-test finding.
+
 ### 4. Second opinion (when available)
 
 An independent reviewer catches blind spots the authoring agent shares with itself. Check for installed cross-agent review paths, in order:
