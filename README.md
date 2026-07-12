@@ -181,7 +181,7 @@ Cross-language workflow skills sharing one philosophy: cheapest sufficient proce
 | `dev-cycle` | Router and shared philosophy for the dev-* skill set |
 | `dev-feature` | Fast path for small features: clarify, plan, implement |
 | `dev-problem-solving` | Brainstorm approaches, decide, solution doc, reviewed build plan |
-| `dev-review` | Orchestrated review: checklist, edge-case audit, second opinion |
+| `dev-review` | Orchestrated review: spec audit, security pass, edge cases, second opinion |
 | `dev-testing` | Integration tests first, in-memory DBs, verified API mocks |
 | `dev-debug` | Root-cause debugging, debugger configs for IDEs and CLI |
 | `dev-knowledge` | Capture solved problems as linked notes in docs/knowledge |

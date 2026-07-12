@@ -1,6 +1,6 @@
 ---
 name: dev-review
-description: Orchestrated code review — production checklist, edge-case test coverage audit, and a second opinion from another AI agent (Gemini/Codex) when available. Use when the user says "review this", "review my changes/PR", "is this ready to merge", or before merging work from dev-feature or dev-problem-solving.
+description: Orchestrated code review — spec-completeness audit, production checklist, security pass, edge-case test coverage audit, and a second opinion from another AI agent (Gemini/Codex) when available. Use when the user says "review this", "review my changes/PR", "is this ready to merge", or before merging work from dev-feature or dev-problem-solving.
 ---
 
 # Code Review (Orchestrated)
@@ -35,6 +35,33 @@ Also check style: comment noise and density per `dev-code-style`.
 
 For every new or changed code path, check the diff's tests against the edge-case checklist in `dev-testing` (empty/null input, boundaries, duplicate/concurrent calls, dependency failures, partial failure). Report **which specific edge cases have no test**, as a short list — e.g. "no test for the 429 path in `syncUsers`". Missing edge-case tests are findings, same as bugs.
 
+### 3b. Security pass (every review, findings block by default)
+
+Check the diff — not the whole codebase — against this list. A security finding needs the same rigor as any other: name the concrete attack ("attacker does X, gets Y"), not a vague "could be unsafe".
+
+**Untrusted input reaching a sink.** Trace every new input (request params, headers, file contents, webhook payloads, LLM output) to where it's used:
+- SQL/queries built by string concatenation instead of parameters/builders
+- Shell commands from `exec`/`spawn` with interpolated input (use arg arrays)
+- Paths joined from user input without normalization → traversal (`../`)
+- HTML rendering: `innerHTML`, `dangerouslySetInnerHTML`, unescaped template output
+- Deserialization of untrusted data (`pickle`, `yaml.load`, Java native); `eval`/`Function(string)` on anything dynamic
+- User-supplied URLs that the server fetches → SSRF (validate host allowlist, block internal ranges)
+
+**AuthZ on every new surface.** Each new endpoint/handler/job answers two questions in code you can point to: *who may call this* (authn) and *may they touch THIS object* (object-level authz — the missing-IDOR-check is the most common diff-level hole; filter by owner/tenant in the query, not after fetch).
+
+**Secrets & sensitive data:**
+- No credentials, API keys, or tokens in the diff (grep for `key=`, `secret`, `Bearer`, PEM headers, high-entropy literals) — env/secret-manager only
+- Nothing sensitive in logs or error responses: no passwords/tokens/PII in log lines, no stack traces or internal paths sent to clients
+- New PII fields: are they excluded from logging/serialization defaults?
+
+**Crypto & randomness:** no hand-rolled crypto; passwords hashed with argon2/bcrypt/scrypt (never plain SHA/MD5); security tokens from a CSPRNG (`crypto.randomBytes`/`rand::rngs::OsRng`), never `Math.random()`; comparisons of secrets constant-time.
+
+**New dependencies:** before accepting one, check it's actively maintained, the name isn't a typosquat of the package you meant, and `npm audit`/`cargo audit`/`pip-audit` is clean for it. Pin the version.
+
+**Money/quota/state-machine paths:** check for TOCTOU races — balance read then written without a transaction/lock lets two concurrent requests double-spend.
+
+**Escalate** beyond this pass when the diff touches auth flows, session handling, crypto, payments, sandboxing, or file upload handling: run the platform's dedicated security review (`/security-review` in Claude Code) or a security-focused second opinion (step 4 with the hint "adversarial security review"), and say in the verdict that you did.
+
 ### 4. Second opinion (when available)
 
 An independent reviewer catches blind spots the authoring agent shares with itself. Check for installed cross-agent review paths, in order:
@@ -54,6 +81,9 @@ Present results in this order, most severe first:
 
 ### Spec gaps & undisclosed TODOs
 - <spec item> — not implemented / stubbed at file.ts:42, user was not told
+
+### Security
+- file.ts:57 — <attack scenario → impact, suggested fix> (blocking unless argued down)
 
 ### Blocking
 - file.ts:42 — <issue, why it breaks, suggested fix>
