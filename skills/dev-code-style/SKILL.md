@@ -27,6 +27,7 @@ Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
 - Comments that restate the line: `// increment counter` above `counter += 1`
 - Section banners (`// ===== HELPERS =====`) — use file/module structure instead.
 - Commented-out code — delete it; git remembers.
+- `TODO`/`FIXME` for work that was part of the current task — either do it now or surface it to the user and get an explicit OK to defer. A TODO the user never saw is a silently dropped requirement, not a comment.
 - Changelog comments (`// fixed by X on 2024-01-05`, `// updated for ticket-123`) — that's what commit messages are for.
 - Comments addressed to a reviewer explaining why the change is correct — put that in the PR description.
 - Empty doc-comment templates auto-filled with parameter names.

@@ -41,6 +41,8 @@ Keep it under ~10 lines. No alternatives-considered section, no risk matrix — 
 
 - **Library first:** if an actively maintained library solves it (recent releases, adoption), use it instead of writing custom code. Check the lockfile first — the project may already depend on something that does the job.
 - **1–2 lines beat 20:** if the stdlib or an existing utility in the repo solves it, use that. Do not build abstractions for one call site.
+- **Reuse, never copy:** before writing a helper, search the repo for existing code doing the same job. If it exists but is private to another module, **change its visibility or move it to a shared module and import it** — copying it creates two diverging implementations. Refactoring access is always cheaper than a future double-fix.
+- **No silent scope cuts:** implement every part of the agreed plan. If a part turns out harder than planned, or you're tempted to leave a `TODO`/stub — **stop and tell the user first**; never commit a TODO, placeholder, or "not implemented" path the user hasn't explicitly approved. The final report must list any approved leftovers under "Deferred", so nothing is dropped silently.
 - **No speculative generality:** implement what was asked, not what might be asked next. No config options nobody requested, no interfaces with one implementation.
 - Follow existing code patterns in the repo; comment per `dev-code-style`.
 - Tests per `dev-testing` — for a small feature that usually means 1–2 integration tests plus the edge cases that apply.
