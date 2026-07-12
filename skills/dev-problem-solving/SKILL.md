@@ -19,6 +19,16 @@ For problems where the *approach* is the hard part. The output is a decision the
    - Externals when relevant: library options and their maintenance state, prior art, known pitfalls (web search)
 4. Ask the questions that change the answer — requirements you can't infer, tolerance for new dependencies, operational constraints. Two rules: **facts are looked up, decisions are asked** — if the codebase or docs can answer it, grep instead of asking; and **every question ships with a recommended answer** so the user can just say "yes" or push back on something concrete. Batch the questions; don't drip-feed.
 
+## Phase 1b — Experiments (spikes)
+
+When an option's feasibility is uncertain — "is the library fast enough?", "does the API return what we think?" — run a small experiment instead of speculating. Rules:
+
+- **Use the project's stack.** Write the spike in the project's language with its package manager, build tool, and test runner — never switch to Python (or any other language) for convenience. The experiment must answer "how does it behave in *our* stack" — a Python approximation of a TypeScript/Rust question answers a different question. Another language is allowed only when the question itself is language-neutral (e.g. probing an external API's response shape) — and say so explicitly.
+- **Isolate in `experiments/<topic>/`** at the repo root. All spike files live there — never scattered through `src/`.
+- **Copy, don't mutate.** If the spike needs to modify project files, **copy them into the experiment directory first** and edit the copies; original sources stay untouched. Reuse project code by importing it where the toolchain allows — copy only what must be changed. For a spike that needs the whole project built and modified, use a git worktree instead (`git worktree add ../spike-<topic>`) and throw it away after.
+- **Keep it disposable.** Add `experiments/` to `.gitignore` (once). A spike has no tests, no error handling, no style requirements — it exists to produce one answer.
+- **Harvest, then discard.** Record the outcome (numbers, response samples, "works/doesn't because…") in the Phase 2 options table and later in the solution doc — the conclusion is the artifact, not the code. Delete the experiment directory once conclusions are captured, or leave it gitignored; never let spike code migrate into `src/` by copy-paste — the real implementation is written fresh under `dev-feature` discipline.
+
 ## Phase 2 — Brainstorm From Different Angles
 
 Generate **2–4 genuinely distinct approaches** (not one approach with three knob settings). Force different angles:
@@ -43,7 +53,7 @@ Recommendation: <one option + 2–3 sentences why>
 Pick one, mix them, or tell me a direction I've missed.
 ```
 
-**Explicitly invite modification** — the user changing option B or adding option D is the point of this phase, not a detour. Iterate until they commit to one.
+**Explicitly invite modification** — the user changing option B or adding option D is the point of this phase, not a detour. Iterate until they commit to one. When two options are too close to call on paper, settle it with a spike (Phase 1b) and put the measured result in the table.
 
 ## Phase 3 — Solution Doc + Build Plan
 
