@@ -81,6 +81,21 @@ Apply these conventions when working with postgres.js (`postgres` package from `
 - Prefer `sql.array()` with `ANY()` over `sql([...])` with `IN` for typed array parameters — it avoids parameter count limits on large arrays and ensures correct type casting.
 - For simple cases where type inference works, `WHERE id = ANY(${ids})` with a plain array also works — use `sql.array()` when you need explicit type control.
 
+## Type Casting & Custom Types
+- **Cast parameters whose type Postgres can't infer.** Parameters arrive as `unknown`; when the context doesn't pin the type, add an explicit cast **in the SQL**: `${id}::uuid`, `${ts}::timestamptz`, `${ids}::text[]` inside `ANY()`. If a query fails with `could not determine data type of parameter` or `operator does not exist: <type> = unknown`, the fix is a cast — not stringifying the value.
+- **Enum parameters always get a cast, schema-qualified:**
+  ```js
+  // CORRECT
+  await sql`update orders set status = ${status}::my_schema.order_status where id = ${id}::uuid`
+
+  // WRONG — bare parameter compared to an enum column
+  await sql`update orders set status = ${status} where id = ${id}`
+  ```
+  Same for enum literals: `'active'::my_schema.order_status`, never a bare quoted string where the comparison is ambiguous.
+- **Always schema-qualify custom types** — enums, domains, composite types — in every cast, DDL column definition, and function signature: `my_schema.my_enumeration`, **never** bare `my_enumeration`. A bare name resolves only while `search_path` happens to include that schema, and `search_path` differs between the app connection, the migration runner, `psql`, and dump/restore — unqualified names break exactly in the environment where they weren't tested.
+- The same qualification rule applies to tables and functions outside `public` when the connection's `search_path` isn't explicitly set.
+- Exception: `::jsonb` casts on parameters are unnecessary — use `sql.json()` (see JSONB section below).
+
 ## JSONB
 - **Inserting JSON (MANDATORY pattern):** Always use `sql.json(value)` to send a JavaScript object to a `jsonb` column. postgres.js handles the wire-format serialization; no manual stringify, no cast required.
   ```js
