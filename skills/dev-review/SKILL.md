@@ -29,6 +29,13 @@ Apply the production checklist from the `code-review` skill if installed (observ
 
 Also check style: comment noise and density per `dev-code-style`.
 
+**Unused-code check (warn and ask, never silently delete):** look for code the diff leaves dead:
+- Code **orphaned by this change** — the old implementation kept alongside its replacement, helpers whose last caller was just removed, now-unreferenced imports/exports/config keys/env vars
+- **Newly added but never called** — speculative helpers, unused parameters, dead branches behind conditions that can't be true
+- Cheap verification: grep for the symbol's usages; run the ecosystem's dead-code tooling when available (`tsc --noUnusedLocals`, `knip`, `cargo +nightly udeps` / `#[warn(dead_code)]` output, `vulture`)
+
+Report each item under "Unused code" in the verdict and **ask the user whether to remove it** — one grouped question, not one per item. Don't flag code that is plausibly used externally (public library API, reflection/DI-loaded, framework hooks) — say it *looks* unused and why you're unsure. If the user approves removal, delete it fully (git remembers) rather than commenting it out.
+
 **Duplication check:** for each nontrivial added function/block, grep the codebase for an existing equivalent (similar name, same signature shape, same constants/regexes/error strings). If the logic already exists as a private helper elsewhere, the finding is "promote and reuse, don't copy" — make it public / move it to a shared module and call it from both places. Two copies of the same logic is a should-fix finding; three or more, or copied *business* logic, is blocking.
 
 ### 3. Edge-case test audit
@@ -94,6 +101,10 @@ Present results in this order, most severe first:
 
 ### Missing edge-case tests
 - <path> — no test for <case>
+
+### Unused code (remove? y/n per group)
+- old util/legacyParser.ts — last caller removed by this diff
+- newHelper() in sync.ts — added but never called
 
 ### Second opinion (<agent> | none available)
 - <agreements / new findings / disagreements>
