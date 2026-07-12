@@ -18,6 +18,7 @@ For problems where the *approach* is the hard part. The output is a decision the
    - Project knowledge base (`docs/knowledge/` — see `dev-knowledge`): has this or a similar problem been solved here before?
    - Externals when relevant: library options and their maintenance state, prior art, known pitfalls (web search)
 4. Ask the questions that change the answer — requirements you can't infer, tolerance for new dependencies, operational constraints. Two rules: **facts are looked up, decisions are asked** — if the codebase or docs can answer it, grep instead of asking; and **every question ships with a recommended answer** so the user can just say "yes" or push back on something concrete. Batch the questions; don't drip-feed.
+5. **Map the decision tree before asking.** List every decision the problem implies (architecture, data model, edge cases, ops) and order questions so earlier answers constrain later ones. A question whose relevance depends on another answer waits for the next batch — never ask both in one batch and never discover the decision mid-implementation.
 
 ## Phase 1b — Experiments (spikes)
 
