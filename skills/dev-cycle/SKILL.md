@@ -29,6 +29,7 @@ Ambiguous between feature and problem-solving? Start with `dev-feature`; it esca
 4. **Evidence over vibes.** Read the code before proposing; reproduce before fixing; capture real API data before mocking.
 5. **Second opinions for judgment calls.** Reviews and plans get an independent agent's pass when one is installed (see `dev-review` §4).
 6. **Compound.** Check `docs/knowledge/INDEX.md` at task start; leave a note when a lesson was expensive (see `dev-knowledge`).
+7. **Files outside the project are read-only.** When the user attaches or points to a path outside the repo root (a sample, a reference implementation, a config from another project) — read it, quote it, copy it into the project if it's needed as a starting point, but **never edit the original**. If a task seems to require changing an out-of-project file, stop and confirm with the user first.
 
 ## Typical Chains
 
