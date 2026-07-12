@@ -172,6 +172,21 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `clickhouse` | OLAP features, JSON/Variant types, async inserts, Rust/Node clients, antipatterns |
 | `rocksdb` | LSM architecture, column families, compaction, Rust/Node bindings, antipatterns |
 
+### Development Cycle
+
+Cross-language workflow skills sharing one philosophy: cheapest sufficient process, KISS, second opinions, compounding knowledge. Start with `dev-cycle`.
+
+| Skill | Covers |
+|-------|--------|
+| `dev-cycle` | Router and shared philosophy for the dev-* skill set |
+| `dev-feature` | Fast path for small features: clarify, plan, implement |
+| `dev-problem-solving` | Brainstorm approaches, decide, solution doc, reviewed build plan |
+| `dev-review` | Orchestrated review: checklist, edge-case audit, second opinion |
+| `dev-testing` | Integration tests first, in-memory DBs, verified API mocks |
+| `dev-debug` | Root-cause debugging, debugger configs for IDEs and CLI |
+| `dev-knowledge` | Capture solved problems as linked notes in docs/knowledge |
+| `dev-code-style` | Moderate comments, no comment noise, self-documenting code |
+
 ### Practices
 
 | Skill | Covers |
