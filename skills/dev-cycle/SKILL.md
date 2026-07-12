@@ -33,5 +33,5 @@ Ambiguous between feature and problem-solving? Start with `dev-feature`; it esca
 ## Typical Chains
 
 - Small feature: `dev-feature` → (`dev-testing` inline) → `dev-review`
-- Hard problem: `dev-problem-solving` → implement via `dev-feature` per step → `dev-review` → `dev-knowledge`
+- Hard problem: `dev-problem-solving` → build (parallel agents for independent steps) → `dev-review` → `dev-knowledge`
 - Nasty bug: `dev-debug` → `dev-review` (the fix) → `dev-knowledge`

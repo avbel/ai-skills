@@ -55,7 +55,8 @@ Write **one** markdown doc (`docs/solutions/<topic>.md`, or the path the user pr
 ## Options considered — the Phase 2 table + why the winner won (1 paragraph)
 ## Decision     — chosen approach, key design points
 ## Build plan   — ordered steps, each independently testable/shippable;
-                  per step: files/areas touched, test strategy (see dev-testing)
+                  per step: files/areas touched, test strategy (see dev-testing),
+                  and dependencies: `depends on: step N` or `parallel-ok`
 ## Risks        — top 2–3 with mitigations. No filler.
 ```
 
@@ -69,4 +70,14 @@ Before implementing, review the build plan — plans are cheapest to fix now:
 2. **Self-review otherwise**, adversarially: What breaks mid-rollout if we stop after step 2? What does this assume about load/data shape that nobody verified? Which step is secretly two steps?
 3. Fold findings into the doc, show the user the delta, get the go-ahead.
 
-Then implement step by step (per `dev-feature` for each step), and when done capture lessons via `dev-knowledge` — link the knowledge note to the solution doc.
+## Phase 5 — Build (parallelize where the plan allows)
+
+Implement per `dev-feature` discipline for each step, and **fan out independent steps to parallel subagents** instead of running them sequentially — that's why the plan marks dependencies:
+
+- **Parallel-safe:** steps marked `parallel-ok` that touch **disjoint files/modules** (the plan's "files/areas touched" line is the check). Dispatch them as concurrent agents in one batch; each agent gets its plan step verbatim plus the solution doc's Decision section — enough context to work without re-exploring.
+- **Also parallelize the always-independent work:** writing test scaffolding/mocks for step N+1 while step N is built; research tasks (capturing real API responses per `dev-testing`); documentation-of-record updates.
+- **Keep sequential:** steps sharing files or types (unless isolated in git worktrees and merged deliberately), anything touching the same migration chain, and steps whose output changes a later step's design.
+- **Join point after each parallel batch:** run the full test suite on the merged result, not just per-agent tests — cross-step integration is exactly what parallel agents can't see. A green batch is the checkpoint before dispatching the next one.
+- Don't force it: for a 3-step plan with a linear dependency chain, sequential is simpler and cheaper. Parallelism pays off from ~2+ genuinely independent steps.
+
+When done, capture lessons via `dev-knowledge` — link the knowledge note to the solution doc.
