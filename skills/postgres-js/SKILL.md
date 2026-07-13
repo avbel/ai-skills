@@ -3,13 +3,13 @@ name: postgres-js
 description: Postgres.js (porsager/postgres) conventions — tagged template queries, transactions, dynamic SQL, cursors, subscriptions, type handling, connection pooling, and TypeScript patterns. Use when writing or modifying code that imports 'postgres' for database access.
 ---
 
-Apply these conventions when working with postgres.js (`postgres` package from `porsager/postgres`)  in node.js or bun projects.
+Apply these conventions when working with postgres.js (`postgres` package from `porsager/postgres`, current stable 3.4.x) in Node.js, Bun, Deno, or Cloudflare Workers projects.
 
 ## Connection Setup
 - Create the connection with `postgres(url, options)` or `postgres(options)`.
-- Falls back to psql environment variables (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`) when not specified.
-- Key options: `max` (pool size, default 10), `idle_timeout`, `max_lifetime`, `connect_timeout` (default 30s), `prepare` (default true), `fetch_types` (default true).
-- For PGBouncer in transaction mode, set `prepare: false`.
+- Falls back to psql-style environment variables when not specified: `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSERNAME`/`PGUSER`, `PGPASSWORD`, `PGAPPNAME`, `PGIDLE_TIMEOUT`, `PGCONNECT_TIMEOUT`.
+- Key options: `max` (pool size, default 10; lower in Cloudflare Workers), `idle_timeout`, `max_lifetime` (randomized by default to recycle prepared statements), `connect_timeout` (default 30s), `prepare` (default true), `fetch_types` (default true), `sslnegotiation: 'direct'` when the server/provider requires direct SSL negotiation.
+- PGBouncer transaction mode: use `prepare: false` unless the deployment is PGBouncer 1.21+ configured with `max_prepared_statements` for protocol-level named prepared statements.
 - Multi-host HA: `postgres('postgres://host1:5432,host2:5433', { target_session_attrs: 'primary' })`.
 - Dynamic auth: `password` option accepts an async function returning a token.
 
@@ -68,7 +68,8 @@ Apply these conventions when working with postgres.js (`postgres` package from `
 
 ## Real-time Subscriptions (Logical Replication)
 - Requires `wal_level = logical` and a publication.
-- Subscribe: `` await sql.subscribe('*', (row, { command, relation }) => { ... }) ``.
+- Pass `publications: 'publication_name'` when not using the default `alltables` publication.
+- Subscribe: `` await sql.subscribe('*', (row, { command, relation }) => { ... }, onSubscribe, onError) ``.
 - Patterns: `'*'`, `'insert:users'`, `'update:public.events'`, `'delete:users=1'`.
 
 ## Arrays with `sql.array()`
@@ -152,6 +153,7 @@ Apply these conventions when working with postgres.js (`postgres` package from `
 - `await sql.end()` — reject new queries, wait for in-flight queries to complete.
 - `await sql.end({ timeout: 5 })` — force close after 5 seconds.
 - `const reserved = await sql.reserve()` — reserve a dedicated connection. Call `reserved.release()` when done.
+- Cloudflare Workers/Pages: postgres.js exposes a `workerd` export and supports Workers TCP sockets; prefer Cloudflare Hyperdrive for connection pooling/query caching.
 
 ## SSL/TLS
 - Basic: `ssl: true`.
