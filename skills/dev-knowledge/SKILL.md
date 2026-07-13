@@ -29,7 +29,8 @@ docs/knowledge/
 **Context:** what part of the system, when this happened
 **Symptom:** what we observed (error text verbatim — it's what gets grepped for)
 **Root cause:** the actual mechanism, 2–4 sentences
-**Fix / decision:** what we did and why; what we rejected and why (one line)
+**What didn't work:** approaches tried and abandoned, one line each with the reason — dead ends are the most expensive knowledge to re-derive
+**Fix / decision:** what we did and why
 **Watch out:** how this bites next time, if applicable
 
 Related: [why-we-chose-pg-mem](why-we-chose-pg-mem.md), [docs/solutions/session-storage.md](../solutions/session-storage.md)
@@ -45,6 +46,7 @@ Related: [why-we-chose-pg-mem](why-we-chose-pg-mem.md), [docs/solutions/session-
 - After `dev-problem-solving` → decision note linking to the solution doc
 - After `dev-feature`, only if something genuinely surprised you
 - When the user says "remember this"
+- **Immediately when the user corrects you** on something a note or convention should have prevented — capture the rule in the same turn, while the cost is fresh. Mark it as either a hard constraint (**MUST NOT** — violating it breaks things) or a convention (*usually do X* — deviation needs a reason); the distinction tells future agents how much freedom they have.
 
 Writing a note is a 2-minute task: draft it, show the user the file, done. Don't ask permission for each note in a project that already has `docs/knowledge/` — its presence is the standing instruction.
 

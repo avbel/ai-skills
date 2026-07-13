@@ -50,6 +50,6 @@ Keep it under ~10 lines. No alternatives-considered section, no risk matrix — 
 
 ## Step 4 — Finish
 
-- Run the project's tests/linter; fix what you broke.
+- Run the project's tests/linter; fix what you broke. **Never delete, skip, weaken, or narrow a test to get green** — a test blocking you is a finding to raise with the user, not an obstacle to remove. Equally: no unrelated refactors, no dependencies beyond the plan — green via scope discipline, not via gaming the signal.
 - Report in a few sentences: what changed, where, test results. **Do not** generate `SUMMARY.md`, `CHANGES.md`, or any doc file unless asked.
 - Offer `dev-review` for a review pass; if the solution surprised you (non-obvious pitfall), capture it via `dev-knowledge` — otherwise skip that too.

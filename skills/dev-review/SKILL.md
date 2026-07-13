@@ -92,7 +92,12 @@ Code inside strings gets zero help from the host language's compiler — a typo 
 An independent reviewer catches blind spots the authoring agent shares with itself. Check for installed cross-agent review paths, in order:
 
 1. `gemini-review-code` skill → `bash ~/.claude/skills/gemini-review-code/scripts/review.sh` (add `--adversarial` for risky changes)
-2. Codex CLI on PATH → `codex review` / a non-interactive `codex exec` review of the diff
+2. Codex CLI on PATH → non-interactive run:
+   ```bash
+   codex exec --output-last-message /tmp/codex-review.md \
+     "Review the diff below adversarially; report concrete failure scenarios only. $(git diff <base>...HEAD)" </dev/null
+   ```
+   The `</dev/null` redirect is required — codex hangs waiting on stdin without it. Read the verdict from the output file, and re-verify any claim it makes about repo state yourself (`git status`, read the cited lines) before repeating it.
 3. OpenCode / Gemini CLI on PATH → non-interactive review prompt with the diff
 
 Run **one** second-opinion pass, not all of them. If none is available, say so in the verdict ("no second opinion available") — don't silently skip. If the second reviewer contradicts your finding, present both views; don't suppress either.
