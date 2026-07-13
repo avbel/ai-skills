@@ -38,7 +38,8 @@ Related: [why-we-chose-pg-mem](why-we-chose-pg-mem.md), [docs/solutions/session-
 
 - **Links are the value** — always add `Related:` links to sibling notes and solution docs (`dev-problem-solving` output), and add a back-link in the notes you reference. An unlinked note won't be rediscovered.
 - Include verbatim error messages and exact library versions — future greps land on them.
-- Notes are for **non-obvious** lessons: surprising root causes, decisions with rejected alternatives, vendor quirks, "we tried X and it failed because Y". Not for things the code or README already says.
+- Notes are for **non-obvious** lessons: surprising root causes, vendor quirks, "we tried X and it failed because Y". Not for things the code or README already says.
+- **Decision notes pass a three-condition filter:** record a decision only when it's (a) hard to reverse, (b) its rationale is surprising, and (c) there was a real trade-off. Routine choices with an obvious winner don't get notes — a knowledge base padded with non-decisions stops being read.
 
 ## When to Write (triggered by other skills)
 

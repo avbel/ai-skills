@@ -138,6 +138,8 @@ Verdict: ready to merge | needs changes
 ## Rules
 
 - Review-only by default: report findings, let the user decide. Fix only when explicitly asked ("review and fix").
-- No nitpick padding — if formatting is linter-enforced, don't comment on it. Fewer, higher-confidence findings beat exhaustive noise.
+- No nitpick padding — skip anything tooling already enforces (formatter, linter, typechecker). Fewer, higher-confidence findings beat exhaustive noise.
 - Every blocking finding needs a concrete failure scenario ("when X happens, Y breaks"), not a vibe.
+- Label each finding **hard violation** (breaks behavior, contradicts spec, security) or **judgement call** (design smell, style) — judgement calls are debatable by definition and the repo's own conventions override them.
+- For large diffs, run the axes (spec, quality, security, tests) as **parallel subagents with separate contexts** so one axis's reading doesn't bias another's — and report each axis in its own verdict section, never merged or re-ranked across axes: re-ranking is how a loud style finding buries a quiet security one.
 - For self-authored code (you wrote the diff earlier in the session), always prefer the second opinion step — you share blind spots with yourself.

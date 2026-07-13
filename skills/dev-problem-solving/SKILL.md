@@ -66,12 +66,18 @@ Write **one** markdown doc (`docs/solutions/<topic>.md`, or the path the user pr
 ## Problem      — 1 paragraph, incl. constraints
 ## Options considered — the Phase 2 table + why the winner won (1 paragraph)
 ## Decision     — chosen approach, key design points
-## Build plan   — ordered steps, each independently testable/shippable;
+## Open questions — questions you can now state precisely but not yet answer;
+                  each blocks only its dependent step, not the whole plan
+## Build plan   — ordered steps, each independently testable/shippable
+                  and sized to fit one fresh agent context;
                   per step: files/areas touched, test strategy (see dev-testing),
                   dependencies (`depends on: step N` or `parallel-ok`), and
                   validation: the exact command that proves the step done
                   (e.g. `pnpm vitest run tests/sync.test.ts`) — a step without
-                  a runnable done-check isn't planned yet
+                  a runnable done-check isn't planned yet.
+                  Wide refactors get expand–contract sequencing: add the new
+                  path first, migrate callers in batches ordered by blast
+                  radius, remove the old path last — never one big flip
 ## Risks        — top 2–3 with mitigations. No filler.
 ```
 

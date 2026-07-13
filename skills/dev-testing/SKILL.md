@@ -38,6 +38,8 @@ Never stub `fetch`/`reqwest` inline across the codebase. Stand up **one mock ser
 - Rust → `wiremock` / `httpmock`
 - Language-agnostic → WireMock (container)
 
+Structure the code so mocks stay simple: wrap the vendor behind an **SDK-style interface** (one method per operation, each returning one shape) instead of mocking a generic `fetch` — a fetch mock has to reimplement routing and grows a second API client inside the test suite.
+
 **The critical step — verify mock fidelity.** A mock that drifts from the real API produces green tests and production failures. Before trusting mock data:
 
 1. **Capture a real response** once (curl the sandbox/real API, or copy a verbatim example from the vendor's current docs) and use it as the mock body. Do not hand-write response JSON from memory.
@@ -45,6 +47,12 @@ Never stub `fetch`/`reqwest` inline across the codebase. Stand up **one mock ser
 3. **Record where each mock body came from** in a one-line comment: `// captured from GET /v2/users 2026-07-12, api-version 2024-11`.
 4. Mock the **failure shapes** too: the vendor's actual 429/5xx error body and headers (e.g. `Retry-After`), not an invented `{error: "oops"}`.
 5. If a sandbox exists, keep **one opt-in live smoke test** (skipped by default, run in CI nightly or on demand) that asserts the real response still matches the mock's shape — this catches drift.
+
+## Test Quality — Three Anti-Patterns
+
+- **Tautological tests:** the expected value must come from an independent source of truth — the spec, a captured real output, a hand computation — never recomputed with the same logic as the code under test. A test that mirrors the implementation passes when both are wrong.
+- **Implementation-coupled tests:** test at stable seams (public interfaces, entry points), not private internals — internals-coupled tests break on every refactor without ever catching a bug. If a behavior can only be tested through internals, that's a design finding, not a reason to reach in.
+- **Horizontal slicing:** don't write all tests upfront and then all implementation. Work in vertical slices — one test, make it pass, next test — so each failure has one candidate cause.
 
 ## Edge-Case Checklist
 
