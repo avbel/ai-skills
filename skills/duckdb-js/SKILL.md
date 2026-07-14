@@ -251,7 +251,7 @@ FROM monthly UNPIVOT (amount FOR month IN (COLUMNS(* EXCLUDE (id))));
 
 ## Node.js Client (`@duckdb/node-api`)
 
-Current stable package: `@duckdb/node-api` `1.5.3-r.3` (wraps released DuckDB binaries via `@duckdb/node-bindings`). It ships native packages for Linux glibc/musl (x64/arm64), macOS (x64/arm64), and Windows (x64/arm64).
+Current stable package: `@duckdb/node-api` `1.5.4-r.1` (DuckDB 1.5.4 line; wraps released DuckDB binaries via `@duckdb/node-bindings`). Official docs list Linux glibc/musl (x64/arm64), macOS (x64/arm64), and Windows x64 as supported; do not rely on Windows ARM64 despite the optional npm binary package existing.
 
 ```typescript
 import { DuckDBInstance } from '@duckdb/node-api'
@@ -292,6 +292,8 @@ Operational patterns:
 - Use `DuckDBInstance.fromCache(path)` when multiple modules in the same Node process may open the same database file; multiple independent instances must not attach the same database.
 - Prefer `runAndReadAll()` for bounded results; use `streamAndReadUntil()` / `streamAndRead()` or async chunk iteration for large results.
 - For cooperative libuv behavior on long queries, prefer `startStreamThenRead*()` helpers; they combine pending results with streaming so work is split into short tasks without fully materializing the result.
+- MAP and UNION support is still incomplete for binding/appending; construct those values in SQL or verify the current API before using appender/prepared-statement paths.
+- User-defined types/functions, profiling info, table description, and Arrow APIs are still on the Node Neo roadmap; do not design wrappers assuming those APIs exist.
 - Use `getRowsJson()` / `getRowObjectsJson()` when serializing results: BIGINT, DECIMAL, timestamps, INTERVAL, and nested types are converted losslessly for JSON.
 - Explicitly close long-lived resources (`connection.closeSync()` / `disconnectSync()`, `instance.closeSync()`) in daemons and tests instead of relying only on GC.
 
