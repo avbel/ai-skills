@@ -73,6 +73,17 @@ nursery = { level = "warn", priority = -1 }
 - Use `?` for error propagation instead of manual `match` on `Result`.
 - Encode invariants in the type system with validated newtype constructors when practical.
 
+## Numeric and Monetary Invariants
+
+- Represent money in integer smallest units. Do not use floating-point arithmetic for money, fees, quotas, balances, or conservation checks.
+- Use checked arithmetic whenever a valid input can exceed the domain type. Do not rely on debug-only overflow panics or release-mode wrapping.
+- When intermediate arithmetic needs more range, widen first, calculate and apply policy in the wider type, then narrow. In particular, clamp a `u128` result before converting it to `u64`; narrowing an unclamped value can reject a mathematically valid capped result.
+- Constructors for validated quotes, settlements, and accounting records must derive policy-controlled fields from validated configuration. Do not accept a caller-supplied fee or total that can bypass the configured formula.
+- For exact-output calculations where a fee depends on gross amount, solve the monotonic relation with checked bounds, then recompute and verify the final fee and conservation equation before returning.
+- Test rounding with an unclamped, non-divisible input so min/max clamps cannot hide floor-versus-ceiling bugs.
+- Add boundary tests for zero, exact limits, limit plus one, `u64::MAX`, narrowing after clamping, and arithmetic overflow or underflow.
+- Add property-style tests for conservation laws such as `gross = net + fees`, including sampled values across the supported range.
+
 ## Traits and Generics
 
 - Use `impl Trait` for simple single-trait parameters.
