@@ -118,7 +118,7 @@ For each external service found, ask the user:
 - **Provide a real test URL / credentials**, or
 - **Mock it** — spin up a local Express/Hono stub on a free port, derive the response shape from the calling code, and point the relevant env var at `http://localhost:<port>`.
 
-Never invent endpoints. Never assume sandbox availability.
+Never invent endpoints. Never assume sandbox availability. When you do mock, follow `dev-testing`'s mock-fidelity rules — capture a real response body rather than hand-writing JSON, and mock the failure shapes too.
 
 ### 2.4 SUI smart contracts (when `Move.toml` detected)
 
@@ -216,7 +216,7 @@ For each script the plan invokes:
 
 ### Edge cases — always propose
 
-In addition to the happy path, draft at least one item from each category:
+In addition to the happy path, draft at least one item from each category (these mirror `dev-testing`'s edge-case checklist — consult it for the fuller list when scoping a plan):
 
 - **Invalid input / boundaries** — empty strings, null, huge payloads, wrong types, malformed JSON, off-by-one numeric ranges.
 - **Auth / authz** — missing/expired token, wrong role, cross-tenant access, replay.

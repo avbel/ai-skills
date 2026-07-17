@@ -67,9 +67,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['**/*.d.ts', '**/*.test.{ts,tsx}'],
-      reporter: ['text', 'html', 'lcov'],
-      thresholds: { lines: 80, functions: 80, branches: 75, statements: 80 },
+      // full coverage options (exclude, reporter, thresholds) — see the Coverage section
     },
   },
 });
@@ -381,6 +379,7 @@ test: {
 - Test behavior, not implementation. Assert on observable outputs and side effects, not on internal call counts unless the call itself is the contract (e.g. a logger).
 - For HTTP, prefer `msw` over hand-rolled `vi.mock('node:http')` — it survives refactors and reuses the same handlers in dev.
 - For DB integration, prefer Testcontainers or a per-test schema over mocking the driver.
+- For the *strategy* behind these choices — integration-first, real-engine databases, mock-server fidelity, the edge-case checklist — see `dev-testing` (language-agnostic). This skill covers only the Vitest mechanics.
 - `expect.assertions(n)` and `expect.hasAssertions()` guard async tests that might silently early-return without asserting.
 
 ## Helper Script
