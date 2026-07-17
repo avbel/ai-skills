@@ -27,7 +27,15 @@ Do NOT use for: pure logic, single-component behavior, or anything `dev-testing`
 - UDP-based code (DNS, metrics, custom protocols) gets a real UDP socket test — UDP silently drops; assert your code tolerates that.
 - One shared docker network (or localhost) so every hop is a genuine TCP connection you can break.
 
-### Databases: real server, dropped state
+### Docker: use it when available — and when it's the faster path
+
+Check for Docker first (`docker info` succeeds). When available, containers are a first-class way to run any dependency below: pinned versions, no host installs, and `down -v` is the whole cleanup story. But a container is a means, not a rule — **pick whichever starts faster on this machine**:
+
+- **Native binary wins** when it's already installed (or a one-line install) and starts in milliseconds: `valkey-server`, `nats-server`, `anvil`, `sui start`. Don't pay image-pull and daemon overhead to run a single static binary.
+- **Container wins** for anything heavy or fiddly to install natively — PostgreSQL, Redpanda, RabbitMQ, WireMock, Toxiproxy, LocalStack — and whenever the production version must be pinned exactly.
+- **No Docker at all** (CI sandbox, restricted host)? The suite must still run: fall back to native binaries for everything that has one, and skip-with-a-visible-reason (not silently pass) the tests whose dependency truly can't run.
+
+Mixing is normal: native valkey + native anvil + containerized Postgres/Toxiproxy in one suite is a good default. Whatever the mix, setup stays one command.
 
 At this tier, skip in-memory shims (`pg-mem`, `mongodb-memory-server`) — use the **real server**:
 
@@ -114,7 +122,7 @@ e2e/
   faults/*.e2e.test.*       # the checklist above
 ```
 
-Compose skeleton (pin every tag; healthchecks are what `setup` waits on):
+Compose skeleton for the containerized part of the stack (pin every tag; healthchecks are what `setup` waits on). Dependencies you run as native binaries don't go here — `setup` spawns them as child processes and kills them on exit:
 
 ```yaml
 services:
