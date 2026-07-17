@@ -24,7 +24,7 @@ npx skills add avbel/ai-skills -s vitest-js
 Install multiple skills at once:
 
 ```bash
-pnpm dlx skills add avbel/ai-skills -s rust-conventions -s anyhow-rust -s tokio -s axum-rust
+pnpm dlx skills add avbel/ai-skills -s rust-conventions -s anyhow-rust -s tokio-rust -s axum-rust
 ```
 
 Install all skills from this repo:
@@ -75,7 +75,7 @@ cp -r /tmp/ai-skills/skills/vitest-js ~/.claude/skills/
 # multiple skills
 cp -r /tmp/ai-skills/skills/rust-conventions \
        /tmp/ai-skills/skills/anyhow-rust \
-       /tmp/ai-skills/skills/tokio \
+       /tmp/ai-skills/skills/tokio-rust \
        ~/.claude/skills/
 ```
 
@@ -104,10 +104,9 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `futures-util-rust` | `StreamExt`, `FutureExt`, `TryStreamExt`, `select!`, `join`, sinks |
 | `google-cloud-secret-manager-rust` | Secret Manager, ADC/IAM, versioned lookup |
 | `hotpath-rust` | Rust profiling: timing, allocations, CPU, Tokio, MCP |
-| `rust-high-performance` | Build config, allocators, type sizes, hashers, hot-path I/O, rayon, profiling |
 | `hud-tokio-profiler` | eBPF zero-instrumentation profiler for Tokio worker blocking; tool comparison |
 | `moka-rust` | `sync::Cache`, `future::Cache`, TTL/TTI, eviction, weighted |
-| `nanoprogress-rust` | Terminal progress bar conventions  |
+| `nanoprogress-rust` | Terminal progress bar conventions |
 | `otel-observable-handles-rust` | Observable instruments, keep-alive pattern, sdk 0.27+ |
 | `opentelemetry-rust` | Traces, metrics, logs, OTLP, propagation, sampling |
 | `reqwest-rust` | Async client, TLS, JSON/multipart, streaming, retries |
@@ -133,6 +132,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `rust-cookbook` | Task-to-crate recipe index: random, async, CLI, compression, db, regex, HTTP |
 | `rust-macros` | macro_rules! fragments/repetitions/hygiene, TT munchers, proc macros (syn/quote) |
 | `rust-high-assurance` | Static/dynamic/operational assurance, threat modeling, unsafe discipline, supply-chain, fuzzing |
+| `rust-high-performance` | Build config, allocators, type sizes, hashers, hot-path I/O, rayon, profiling |
 | `power-rust` | Prompt patterns that reduce LLM Rust bugs (versions, cancel-safety, SAFETY) |
 
 ### JavaScript / TypeScript — libs & tools
