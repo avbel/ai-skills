@@ -17,7 +17,7 @@ Use for:
 - SDK verification: does generated/published client code actually work against a live stack
 - Blockchain flows: contract deploy + transaction paths that unit tests cannot fake
 
-Do NOT use for: pure logic, single-component behavior, or anything `dev-testing`'s in-memory tier already covers. If a bug is reproducible with `pg-mem` and `msw`, it does not need this tier.
+Do NOT use for: pure logic, single-component behavior, or anything `dev-testing`'s in-memory tier already covers. If a bug is reproducible with `pg-mem` and `msw`, it does not need this tier. And when the user wants a one-off, human-in-the-loop verification session rather than a durable suite ("run it and let's check it works"), that's `manual-testing-node-js` — its confirmed plan items are good seeds for this tier's journey tests later.
 
 ## Stack Rules
 
@@ -71,7 +71,7 @@ Create topics/queues in setup, unique names per worker (`orders-${WORKER_ID}`), 
 
 ### Blockchains: real local network
 
-- **Sui** → `sui start --force-regenesis` (localnet, clean state each run). Fund via local faucet (`sui client faucet` / `http://127.0.0.1:9123/gas`). Deploy the actual Move packages in setup. See the `sui-cli` and `sui-common-ops` skills for command details.
+- **Sui** → `sui start --with-faucet --force-regenesis` (localnet, clean state each run; without `--with-faucet` there is no local faucet to fund accounts from). Fund via `sui client faucet`, then deploy the actual Move packages in setup with `sui client test-publish` (keeps localnet addresses out of `Published.toml`). Command details live in the `sui-cli` skill; if the package depends on USDC, deploy the mock via `sui-local-dev-usdc` first — mainnet USDC doesn't exist on a fresh localnet.
 - **Ethereum-like** → **Anvil** (Foundry): `anvil --port 8545` — instant mining, 10 deterministic funded accounts, `anvil_setBalance`/`evm_mine`/`evm_setNextBlockTimestamp` cheatcodes. Hardhat node is the fallback when the project is already Hardhat-based. Fork mode (`anvil --fork-url $RPC`) when the test needs real mainnet contract state.
 - Never point e2e tests at public testnets: they're slow, flaky, rate-limited, and shared — everything this tier exists to avoid. Deterministic accounts + regenesis beat faucet-begging.
 

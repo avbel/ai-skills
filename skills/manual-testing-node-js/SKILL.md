@@ -7,7 +7,7 @@ description: Manual testing for Node.js backends — env setup, docker DB + migr
 
 Walk the user through manually testing a Node.js backend repo end-to-end: detect, provision, plan, execute, report.
 
-Coexists with the generic `manual-testing` skill (which handles non-Node work) and project-specific testers like `ln-522-manual-tester`. This skill fires only when `package.json` is present.
+This skill fires only when `package.json` is present. It covers **one-off, human-in-the-loop sessions** — nothing durable is produced except the plan record. When the same journeys should run repeatedly and unattended (CI, release gates), build an automated suite with `dev-e2e-testing` instead; a confirmed plan from this skill is a good seed for it.
 
 ---
 
@@ -86,12 +86,12 @@ On accept: write fresh values back to `.env`, update the public-key comment, and
 ### 1.5 Idempotency / re-runs
 
 If any of these exist, ask the user `reuse / wipe / abort`:
-- A `$ENV_PATH` whose content starts with `NODE_ENV=test` (test env from a prior run)
+- A `$ENV_PATH` containing a line matching `^NODE_ENV=test\b` (test env from a prior run — same rule as Step B)
 - Running docker containers from a previous run
 - Prior `tests/manual/PLAN-*.md`
 - A `$ENV_PATH.backup-<timestamp>` left over from a prior run — suggests teardown was skipped. **Offer to restore it first before anything else**, since it represents the user's real env.
 
-Don't silently pick up partial state. Files at `$ENV_PATH` *without* `NODE_ENV=test` are the user's real env — they are always preserved by rename, never wiped.
+Don't silently pick up partial state. Files at `$ENV_PATH` *without* a `^NODE_ENV=test\b` line are the user's real env — they are always preserved by rename, never wiped.
 
 ---
 
@@ -122,7 +122,7 @@ Never invent endpoints. Never assume sandbox availability.
 
 ### 2.4 SUI smart contracts (when `Move.toml` detected)
 
-1. Start a local network with faucet: `sui start --with-faucet --force-regenesis` (background). The deploy address needs gas, and tests usually need to top up additional addresses.
+1. Start a local network with faucet: `sui start --with-faucet --force-regenesis` (background). The deploy address needs gas, and tests usually need to top up additional addresses. Localnet flags, faucet endpoint, and troubleshooting are documented in `sui-local-dev-usdc` — that skill is the authority; don't restate its commands here.
 2. **Switch the CLI to the local env before anything else**:
    ```sh
    sui client new-env --alias local --rpc http://127.0.0.1:9000

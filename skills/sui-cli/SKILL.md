@@ -129,6 +129,10 @@ sui move test
 sui client verify-bytecode-meter                      # confirm bytecode fits limits
 sui client publish --gas-budget 100000000 .           # legacy single-purpose form
 
+# Ephemeral networks (localnet/devnet): use test-publish so addresses go to
+# an ephemeral pubfile (Pub.<env>.toml) instead of polluting Published.toml
+sui client test-publish --build-env localnet --with-unpublished-dependencies --json
+
 # PTB form: publish and route UpgradeCap explicitly
 sui client ptb \
   --move-call sui::tx_context::sender --assign sender \
@@ -142,6 +146,7 @@ sui client verify-source                              # diff local package vs on
 ```
 
 - The PTB form is the correct shape when the deploy must do more than publish (e.g. publish then call init, or burn the `UpgradeCap` with `package::make_immutable`).
+- `test-publish` is the right form for throwaway publishes on localnet/devnet: the `--build-env` name controls dependency resolution, and the resulting addresses land in `Pub.<env>.toml` (defaulting to the active CLI environment's name) so `Published.toml` stays clean for real releases.
 - Set `--gas-budget` explicitly on older CLI versions; recent versions infer a budget when omitted.
 - `verify-bytecode-meter` returns module/function metering numbers — use it before pushing big modules to mainnet.
 
