@@ -1,6 +1,6 @@
 ---
-name: macros_rust
-description: Write and debug Rust macros — declarative macro_rules! (matchers, fragment specifiers block/expr/ident/ty/pat/tt/etc., repetitions $()sep rep, metavariable expressions ${count/index/len/ignore}, hygiene and $crate, follow-set restrictions), the core patterns (TT munchers, internal @-rules, counting, recursion limit), debugging with cargo-expand/trace_macros, declarative macros 2.0, and procedural macros (function-like, attribute, derive with helper attributes; proc-macro2 + quote + syn setup, parse_macro_input!, span-based error reporting). Use when authoring, reviewing, or debugging any Rust macro.
+name: rust-macros
+description: Write and debug Rust macros — macro_rules! (fragment specifiers, repetitions, hygiene, $crate, TT munchers), debugging with cargo-expand/trace_macros, and procedural macros (derive/attribute/function-like with syn + quote + proc-macro2). Use when authoring, reviewing, or debugging any Rust macro.
 ---
 
 # Rust Macros
@@ -192,5 +192,5 @@ This points the diagnostic at `field`'s span. `panic!` aborts the whole compilat
 
 ## Cross-references
 
-- General style → `rust-conventions`, `rust-patterns` · Design → `design-patterns-rust`
-- Build/perf impact of heavy proc-macro deps → `high_performance_rust`
+- General style → `rust-conventions` · Design → `design-patterns-rust`
+- Build/perf impact of heavy proc-macro deps → `rust-high-performance`

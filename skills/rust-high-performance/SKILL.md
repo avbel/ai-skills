@@ -1,6 +1,6 @@
 ---
-name: high_performance_rust
-description: Optimize Rust runtime speed, memory usage, binary size, and compile times — measure-first benchmarking/profiling, release build config (codegen-units, LTO, target-cpu, PGO, alternative allocators jemalloc/mimalloc), reducing heap allocations (with_capacity, reuse, Cow, SmallVec/ThinVec), shrinking type sizes (field ordering, smaller enums, boxing large variants), faster hashers (rustc-hash/FxHashMap, ahash, fnv), hot-path std-lib idioms, buffered/locked I/O, inlining, and parallelism with rayon. Use when profiling shows a hot path or when tuning a Rust program for speed, memory, or size.
+name: rust-high-performance
+description: Optimize Rust speed, memory, binary size, and compile times — measure-first profiling, release build config (LTO, codegen-units, PGO, alternative allocators), reducing heap allocations, shrinking type sizes, faster hashers, buffered I/O, and rayon parallelism. Use when profiling shows a hot path or when tuning a Rust program for speed, memory, or size.
 ---
 
 # High-Performance Rust
@@ -12,7 +12,7 @@ Techniques from *The Rust Performance Book* (Nethercote) to improve runtime spee
 Optimize against data, not intuition. Profile to find the hot spot, change one thing, re-measure.
 
 - **Benchmark** with `Criterion` or `Divan` (`divan-rust` skill) for in-process micro/workload benchmarks; `hyperfine` for whole-program wall-time; `Bencher`/CI for regression tracking. Built-in `#[bench]` needs nightly. Prefer realistic workloads over microbenchmarks; metrics like instruction counts have lower variance than wall-time.
-- **Profile** to locate hot code and allocations. CPU/time: `samply`, `perf`, `cargo flamegraph`, `hotpath-rs` (this repo). Heap: `DHAT`, `heaptrack`, `bytehound`. Tokio stalls: `hud-tokio-profiler` (this repo).
+- **Profile** to locate hot code and allocations. CPU/time: `samply`, `perf`, `cargo flamegraph`, `hotpath-rust` (this repo). Heap: `DHAT`, `heaptrack`, `bytehound`. Tokio stalls: `hud-tokio-profiler` (this repo).
 - Always re-measure after a change — effects (especially inlining) are unpredictable and sometimes negative.
 
 ```toml
@@ -145,5 +145,5 @@ Lock in wins: add benchmarks to CI (Bencher/Criterion-in-CI), assert key type si
 
 ## Cross-references
 
-- Benchmarking → `divan-rust` · Profiling → `hotpath-rs`, `hud-tokio-profiler`
-- General style → `rust-conventions`, `rust-patterns` · Async perf → `rust-async-conventions`, `tokio-rust`
+- Benchmarking → `divan-rust` · Profiling → `hotpath-rust`, `hud-tokio-profiler`
+- General style → `rust-conventions`, `design-patterns-rust` · Async perf → `rust-async-conventions`, `tokio-rust`

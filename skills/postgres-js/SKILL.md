@@ -3,6 +3,8 @@ name: postgres-js
 description: Postgres.js (porsager/postgres) conventions — tagged template queries, transactions, dynamic SQL, cursors, subscriptions, type handling, connection pooling, and TypeScript patterns. Use when writing or modifying code that imports 'postgres' for database access.
 ---
 
+# Postgres.js
+
 Apply these conventions when working with postgres.js (`postgres` package from `porsager/postgres`, current stable 3.4.x) in Node.js, Bun, Deno, or Cloudflare Workers projects.
 
 ## Connection Setup

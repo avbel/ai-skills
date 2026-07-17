@@ -175,7 +175,7 @@ let tmp = Builder::new()
 ## Error Handling
 
 ```rust
-use tempfile::persist::PersistError;
+use tempfile::PersistError;
 
 match tmp.persist("/target/path") {
     Ok(_) => {},

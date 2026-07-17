@@ -108,8 +108,6 @@ fn process(depth: usize) -> Result<()> {
 Eyre's distinguishing feature over anyhow. Swap the handler to change what information errors carry and how they format:
 
 ```rust
-use eyre::InstallHook;
-
 // Set a custom handler early in main
 fn main() -> eyre::Result<()> {
     // Use default handler (minimal, like anyhow)
@@ -124,7 +122,7 @@ fn main() -> eyre::Result<()> {
 ```
 
 Known handler crates:
-- **`stable-eyre`** — uses `std::backtrace::Backtrace`, removes喧information.
+- **`stable-eyre`** — uses `std::backtrace::Backtrace`; captures backtraces only, no span information.
 - **`color-eyre`** — colorful backtraces, `tracing_error::SpanTrace`, `Section` trait for custom error sections.
 - **`simple-eyre`** — minimal handler that only formats the error chain.
 - **`jane-eyre`** — combines `color-eyre` features with additional customization.

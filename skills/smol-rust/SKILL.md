@@ -1,6 +1,6 @@
 ---
 name: smol-rust
-description: smol async runtime conventions for Rust — block_on, global spawn, Executor/LocalExecutor, Timer, Async<T> I/O adapter, Unblock/blocking thread pool, futures-lite prelude, the smol-rs subcrate ecosystem, running tokio-based libraries via async-compat, and choosing smol vs tokio. Use when writing or reviewing async Rust that uses smol (or deciding between smol and tokio) instead of the tokio runtime.
+description: smol async runtime conventions for Rust — block_on, global spawn, Executor/LocalExecutor, Timer, Async<T> I/O adapter, Unblock, futures-lite prelude, the smol-rs subcrates, and running tokio-based libraries via async-compat. Use when writing or reviewing async Rust that uses smol, or when choosing between smol and tokio.
 ---
 
 # smol

@@ -4,6 +4,31 @@ Review of all 82 skills in this repository (July 2026). Findings are grouped by
 priority. Code-level claims marked **verified** were checked against crate/package
 sources; everything else was confirmed by direct inspection of the skill files.
 
+## Status: applied
+
+Everything in §1–§5 and the actionable parts of §6 have been **fixed on this
+branch**, and §7's lint script now exists as `scripts/lint-skills.sh` (run it
+from the repo root; it passes on all 82 skills). Notes on the applied fixes:
+
+- Renames (§4): `cookbook_rust` → `rust-cookbook`, `high_assurance_rust` →
+  `rust-high-assurance`, `high_performance_rust` → `rust-high-performance`,
+  `macros_rust` → `rust-macros`, `hotpath-rs` → `hotpath-rust`. Users with the
+  old directory names installed under `~/.claude/skills/` should re-install.
+- The dangling `rust-testing` references were retargeted to `dev-testing`
+  (no Rust-specific testing skill exists yet — creating one remains open).
+- The lint run surfaced 10 additional skills missing an H1 title beyond the two
+  in §4; all have one now. It also surfaced 6 more descriptions over 400 chars
+  beyond the seven in §5; all 13 are now ≤ ~390 chars.
+
+Intentionally **not** changed (informational items): the review-trio model-name
+staleness watch, the `node:ffi` forward-looking section (well-hedged),
+the `0x2::balance::send_funds` maintainer sanity check, and the broad
+trigger-phrase pass over all descriptions (the existing descriptions are
+serviceable; rewriting 60+ of them mechanically risks regressing trigger
+accuracy without evals).
+
+The sections below are the original review record.
+
 What checked out clean and needs **no** action: `README.md` is fully in sync with
 the skill directories; every frontmatter `name:` matches its directory; version
 pins across Rust and JS skills are current (reqwest 0.13, tonic 0.14.6,

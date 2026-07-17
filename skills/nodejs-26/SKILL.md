@@ -3,6 +3,8 @@ name: nodejs-26
 description: Node.js 26 (May 2026) runtime conventions — Temporal API enabled by default, V8 14.6 language features (Map.getOrInsert, Iterator.concat), Undici 8 fetch, experimental node:ffi, raw Ed25519 keys, and removals (legacy _stream_ modules, writeHeader, --experimental-transform-types). Use when targeting or upgrading to Node.js 26+.
 ---
 
+# Node.js 26
+
 Apply these conventions when targeting Node.js 26.x (Current line, LTS in October 2026). V8 14.6 / Chromium 146 baseline, `NODE_MODULE_VERSION = 147`.
 
 ## Runtime Baseline

@@ -22,9 +22,6 @@ tracing = "0.1"
 # For subscribers and formatting — almost always needed
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
-# For async instrumentation (instrument futures/tasks)
-tracing-futures = "0.2"
-
 # Optional: for tokio-console debugging
 console-subscriber = "0.4"
 
@@ -276,7 +273,6 @@ error!(error = ?err, "database connection failed");
 
 ```rust
 use tracing::Instrument;
-use tracing_futures::InstrumentFuture;
 
 // Instrument a future
 let fut = async { do_work().await }.instrument(tracing::span!(Level::INFO, "do_work"));

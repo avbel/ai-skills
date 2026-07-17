@@ -1,6 +1,6 @@
 ---
 name: sui-cli
-description: Use when working with the Sui CLI from a terminal: managing network environments and addresses, querying coins/objects/balances, calling Move functions and building Programmable Transaction Blocks (`sui client ptb`), publishing and upgrading Move packages, managing keys with `sui keytool`, building/testing Move code with `sui move`, replaying transactions with `sui replay`, and validator operations with `sui validator`.
+description: Use when working with the Sui CLI from a terminal — network environments and addresses, querying coins/objects/balances, calling Move functions, Programmable Transaction Blocks (`sui client ptb`), publishing/upgrading Move packages, `sui keytool`, building/testing Move code, `sui replay`, and validator operations.
 ---
 
 # Sui CLI

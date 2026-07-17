@@ -1,6 +1,6 @@
 ---
 name: dev-problem-solving
-description: Structured problem solving for non-trivial problems — gather data, brainstorm approaches from different angles, present options the user can pick/modify/extend, produce a solution doc + build plan, then review the plan. Use when the user describes a problem or goal with multiple viable solutions, says "how should we", "I have a problem with", "let's brainstorm", or brings their own solution ideas to evaluate.
+description: Structured problem solving for non-trivial problems — gather data, brainstorm approaches, present options the user can pick/modify/extend, produce a solution doc + build plan, then review the plan. Use when a problem or goal has multiple viable solutions, the user says "how should we", "let's brainstorm", or brings their own ideas to evaluate.
 ---
 
 # Problem Solving — Brainstorm → Decide → Plan → Review

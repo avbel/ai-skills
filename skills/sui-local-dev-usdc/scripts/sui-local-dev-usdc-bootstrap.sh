@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+
 scenario="${1:-start}"
 
 case "$scenario" in
@@ -23,35 +26,51 @@ sui client active-address'
 mkdir -p /tmp/usdc-coin && cd /tmp/usdc-coin
 sui move new usdc
 
-# Write the USDC coin module (see SKILL.md for full source)
+# Write the USDC coin module (kept identical to SKILL.md)
 cat > sources/usdc.move << '\''MOVE'\''
-module usdc::usdc {
-    use sui::coin;
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
+module usdc::usdc;
 
-    public struct USDC has drop {}
+use sui::coin::{Self, TreasuryCap};
 
-    fun init(witness: USDC, ctx: &mut TxContext) {
-        let (treasury, metadata) = coin::create_currency(
-            witness, 6, b"USDC", b"USD Coin",
-            b"Mock USDC for local dev testing",
-            option::none(), ctx,
-        );
-        transfer::public_freeze_object(metadata);
-        coin::mint_and_transfer(&mut treasury, 1_000_000_000_000, tx_context::sender(ctx), ctx);
-        transfer::public_transfer(treasury, tx_context::sender(ctx));
-    }
+/// One-time witness for USDC
+public struct USDC has drop {}
 
-    public entry fun mint(
-        treasury_cap: &mut coin::TreasuryCap<USDC>,
-        amount: u64,
-        recipient: address,
-        ctx: &mut TxContext,
-    ) {
-        let coin = coin::mint(treasury_cap, amount, ctx);
-        transfer::public_transfer(coin, recipient);
-    }
+/// Create the coin, mint initial supply to publisher,
+/// freeze metadata (matching Circle native USDC: 6 decimals).
+fun init(witness: USDC, ctx: &mut TxContext) {
+    let (mut treasury, metadata) = coin::create_currency(
+        witness,
+        6,                                  // decimals — matches native USDC
+        b"USDC",                             // symbol
+        b"USD Coin",                         // name
+        b"Mock USDC for local dev testing",  // description
+        option::none(),                      // icon_url
+        ctx,
+    );
+    transfer::public_freeze_object(metadata);
+
+    // Mint 1 000 000 USDC (1_000_000 * 10^6 = 1_000_000_000_000 in micro-units)
+    // to the publisher address as initial supply.
+    coin::mint_and_transfer(
+        &mut treasury,
+        1_000_000_000_000,  // 1M USDC with 6 decimals
+        ctx.sender(),
+        ctx,
+    );
+
+    // Transfer TreasuryCap to publisher so they can mint more later
+    transfer::public_transfer(treasury, ctx.sender());
+}
+
+/// Mint additional USDC. Only the TreasuryCap holder can call this.
+public fun mint(
+    treasury_cap: &mut TreasuryCap<USDC>,
+    amount: u64,
+    recipient: address,
+    ctx: &mut TxContext,
+) {
+    let coin = coin::mint(treasury_cap, amount, ctx);
+    transfer::public_transfer(coin, recipient);
 }
 MOVE
 
@@ -120,7 +139,7 @@ rm -rf /tmp/usdc-coin'
     ;;
 esac
 
-SCENARIO="$scenario" DESCRIPTION="$description" COMMANDS="$commands" python3 <<'PY'
+cat > "$tmp_dir/emit-json.py" <<'PY'
 import json
 import os
 
@@ -130,3 +149,5 @@ print(json.dumps({
     "commands": os.environ["COMMANDS"],
 }, indent=2))
 PY
+
+SCENARIO="$scenario" DESCRIPTION="$description" COMMANDS="$commands" python3 "$tmp_dir/emit-json.py"

@@ -1,6 +1,6 @@
 ---
 name: dev-e2e-testing
-description: End-to-end tests against a production-parity stack — real databases dropped per run, real Valkey and message brokers in disposable mode, local blockchain networks (Sui, EVM), real TCP/UDP/HTTP sockets, mock servers only at external API boundaries, and mandatory network-fault injection. Use when writing e2e tests, when the user asks to "test against a real stack", "test network failures", or to verify an SDK/service end-to-end. For the everyday integration suite see dev-testing.
+description: End-to-end tests against a production-parity stack — real databases dropped per run, disposable Valkey/brokers, local blockchain networks, real sockets, mocks only at external API boundaries, mandatory network-fault injection. Use when writing e2e tests or asked to "test against a real stack" or "test network failures". Everyday suite: dev-testing.
 ---
 
 # E2E Testing — Production-Parity Tier

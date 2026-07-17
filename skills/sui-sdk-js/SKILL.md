@@ -9,7 +9,7 @@ Use this skill for JavaScript and TypeScript projects that interact with Sui thr
 
 Primary source: Mysten Labs Sui TypeScript SDK docs at `https://sdk.mystenlabs.com/sui`.
 
-**JSON-RPC is deprecated and will be decommissioned soon. Do not use `SuiJsonRpcClient` under any circumstances. Migrate all existing JSON-RPC code to `SuiGrpcClient` or `SuiGraphQLClient`.**
+**JSON-RPC is deprecated and will be decommissioned soon. Default to `SuiGrpcClient` (or `SuiGraphQLClient`) and migrate existing JSON-RPC code away from `SuiJsonRpcClient`. Documented exception: the Kiosk SDK requires `SuiJsonRpcClient` or `SuiGraphQLClient` because kiosk event queries are not available over gRPC — for kiosk work, follow the `sui-kiosk-sdk-js` skill.**
 
 **All code in this skill targets SDK v2+. The legacy `SuiClient` from `@mysten/sui/client` (pre-v2) has been removed. Do not use it.**
 
@@ -19,7 +19,7 @@ Primary source: Mysten Labs Sui TypeScript SDK docs at `https://sdk.mystenlabs.c
 - The SDK is ESM-only. Ensure `package.json` has `"type": "module"` and TypeScript uses `moduleResolution` compatible with ESM, such as `NodeNext`, `Node16`, or `Bundler`.
 - Prefer modular subpath imports like `@mysten/sui/grpc`, `@mysten/sui/transactions`, `@mysten/sui/keypairs/ed25519`, `@mysten/sui/bcs`, and `@mysten/sui/utils`.
 - For new code, prefer `SuiGrpcClient` and the transport-agnostic `client.core` API. In reusable code, accept `ClientWithCoreApi` and call `client.core.*` even when native clients expose shortcuts.
-- **JSON-RPC is deprecated and will be decommissioned. Never introduce `SuiJsonRpcClient` code. Migrate existing JSON-RPC usage to gRPC or GraphQL.**
+- **JSON-RPC is deprecated and will be decommissioned. Do not introduce `SuiJsonRpcClient` code except for the documented kiosk/event-query exception (see the `sui-kiosk-sdk-js` skill). Migrate other JSON-RPC usage to gRPC or GraphQL.**
 - Public Mysten fullnode endpoints are rate-limited (100 requests per 30 seconds). Production apps should use dedicated nodes or a provider endpoint.
 
 ## Install
@@ -106,34 +106,7 @@ const grpcClient = new SuiGrpcClient({ network: 'localnet', transport });
 
 ### gRPC Service Clients
 
-For lower-level access beyond the Core API, `SuiGrpcClient` exposes service clients:
-
-```ts
-// Transaction execution
-const { response } = await grpcClient.transactionExecutionService.executeTransaction({
-  transaction: { bcs: { value: transactionBytes } },
-  signatures: signatures.map((sig) => ({
-    bcs: { value: fromBase64(sig) },
-    signature: { oneofKind: undefined },
-  })),
-});
-if (!response.finality?.effects?.status?.success) {
-  throw new Error(`Transaction failed: ${response.finality?.effects?.status?.error || 'Unknown error'}`);
-}
-
-// Ledger service
-const { response } = await grpcClient.ledgerService.getTransaction({ digest: '0x123...' });
-const { response: epochInfo } = await grpcClient.ledgerService.getEpoch({});
-
-// State service
-const { response } = await grpcClient.stateService.listOwnedObjects({
-  owner: '0xabc...',
-  objectType: '0x2::coin::Coin<0x2::sui::SUI>',
-});
-
-// Name service
-const { response } = await grpcClient.nameService.reverseLookupName({ address: '0xabc...' });
-```
+For lower-level access beyond the Core API (`transactionExecutionService`, `ledgerService`, `stateService`, `nameService`), read `references/queries.md`.
 
 ### GraphQL Client
 
@@ -297,137 +270,7 @@ const result = await client.signAndExecuteTransaction({
 
 ## Query Patterns
 
-### Objects
-
-```ts
-// Get single object
-const { object } = await client.core.getObject({
-  objectId,
-  include: { content: true, display: true, owner: true },
-});
-
-// Get multiple objects
-const { objects } = await client.core.getObjects({
-  objectIds: ['0x123...', '0x456...'],
-  include: { content: true },
-});
-for (const obj of objects) {
-  if (obj instanceof Error) {
-    console.log('Object not found:', obj.message);
-  } else {
-    console.log(obj.objectId, obj.type);
-  }
-}
-
-// List owned objects
-const result = await client.core.listOwnedObjects({
-  owner: '0xabc...',
-  filter: { StructType: '0x2::coin::Coin<0x2::sui::SUI>' },
-  limit: 10,
-});
-// Paginate
-if (result.cursor) {
-  const nextPage = await client.core.listOwnedObjects({
-    owner: '0xabc...',
-    cursor: result.cursor,
-  });
-}
-```
-
-Object `include` options: `content`, `previousTransaction`, `json`, `objectBcs`, `display`.
-
-Always request only the include fields needed.
-
-### Dynamic Fields
-
-```ts
-// List dynamic fields
-const result = await client.core.listDynamicFields({ parentId: '0x123...', limit: 10 });
-
-// Get specific dynamic field
-import { bcs } from '@mysten/sui/bcs';
-const { dynamicField } = await client.core.getDynamicField({
-  parentId: '0x123...',
-  name: { type: 'u64', bcs: bcs.u64().serialize(42).toBytes() },
-});
-
-// Get dynamic object field (supports object include options)
-const { object } = await client.core.getDynamicObjectField({
-  parentId: '0x123...',
-  name: { type: '0x2::object::ID', bcs: bcs.Address.serialize('0x456...').toBytes() },
-  include: { content: true },
-});
-```
-
-### Transactions
-
-```ts
-// Execute signed transaction
-const result = await client.core.executeTransaction({
-  transaction: transactionBytes,
-  signatures: [signature],
-  include: { effects: true, events: true },
-});
-if (result.Transaction) {
-  console.log('Success:', result.Transaction.digest);
-} else {
-  console.log('Failed:', result.FailedTransaction?.status.error);
-}
-
-// Simulate (dry-run)
-const simResult = await client.core.simulateTransaction({
-  transaction: tx,
-  include: { effects: true, balanceChanges: true, commandResults: true },
-});
-
-// Disable full validation only for inspection workflows such as non-entry Move functions
-const uncheckedSim = await client.core.simulateTransaction({
-  transaction: tx,
-  checksEnabled: false,
-  include: { commandResults: true },
-});
-
-// Get transaction by digest
-const txResult = await client.core.getTransaction({
-  digest: 'ABC123...',
-  include: { effects: true, events: true, transaction: true },
-});
-
-// Wait for indexing by digest or by an execution result
-await client.core.waitForTransaction({ digest: 'ABC123...', timeout: 60_000 });
-await client.core.waitForTransaction({ result: executeResult, include: { effects: true } });
-```
-
-Transaction `include` options: `effects`, `events`, `transaction`, `balanceChanges`, `objectTypes`, `bcs`. Simulation also supports `commandResults`.
-
-### System
-
-```ts
-const { referenceGasPrice } = await client.core.getReferenceGasPrice();
-const { systemState } = await client.core.getCurrentSystemState();
-const { chainIdentifier } = await client.core.getChainIdentifier();
-```
-
-### Move Metadata
-
-```ts
-const { function: fn } = await client.core.getMoveFunction({
-  packageId: '0x2',
-  moduleName: 'coin',
-  name: 'value',
-});
-```
-
-### Name Service
-
-```ts
-const { name } = await client.core.defaultNameServiceName({ address: '0xabc...' });
-
-// MVR (Move Registry)
-const { type } = await client.core.mvr.resolveType({
-  type: '@mysten/sui::coin::Coin<@mysten/sui::sui::SUI>',
-});
-```
+Object, dynamic field, transaction, system, Move metadata, and name service queries via `client.core` (including execute/simulate/wait patterns and `include` options): read `references/queries.md`.
 
 ## Keypairs and Signing
 
@@ -596,189 +439,16 @@ const json = await tx.toJSON({ client: grpcClient });
 const tx = Transaction.from(json);
 ```
 
-## Gas
+## Additional References
 
-The SDK handles gas automatically in most cases:
-1. **Gas price** — uses network's reference gas price
-2. **Gas budget** — simulates and estimates
-3. **Gas payment** — uses address balances, falls back to coin objects
+Read `references/advanced.md` when the task needs any of:
 
-Override only when needed:
-
-```ts
-tx.setGasPrice(1500);
-tx.setGasBudget(50_000_000);
-
-// Specific coin objects for gas
-tx.setGasPayment([
-  { objectId: '0xCoin1', version: '1', digest: 'abc...' },
-]);
-
-// Use address balance for gas (no coin objects)
-tx.setGasPayment([]);
-```
-
-`tx.gas` references the gas coin. Only works when gas is paid from coin objects. When using `setGasPayment([])`, use `tx.coin()` instead.
-
-## Offline and Sponsored Transactions
-
-### Offline Building
-
-```ts
-import { Transaction } from '@mysten/sui/transactions';
-
-const tx = new Transaction();
-tx.setSender(sender);
-tx.setGasPrice(referenceGasPrice);
-tx.setGasBudget(50_000_000);
-tx.setGasPayment([{ objectId, version, digest }]);
-tx.objectRef({ objectId, version, digest });
-
-const bytes = await tx.build();
-```
-
-For offline transactions with no owned object inputs (only shared/party objects and address-balance withdrawals), use `tx.withdrawal()`, `tx.sharedObjectRef()` for shared or party objects, `tx.setGasPayment([])`, and set an expiration (`tx.setExpiration({ ValidDuring: ... })`) because no gas coin/object version anchors the transaction.
-
-### Sponsored Transactions
-
-Coin-based sponsorship:
-
-```ts
-// 1. User builds transaction kind bytes (no gas info)
-const tx = new Transaction();
-// ... add commands ...
-const kindBytes = await tx.build({ client: grpcClient, onlyTransactionKind: true });
-
-// 2. Sponsor wraps with gas info
-const sponsoredTx = Transaction.fromKind(kindBytes);
-sponsoredTx.setSender(userAddress);
-sponsoredTx.setGasOwner(sponsorAddress);
-sponsoredTx.setGasPayment(sponsorGasCoins);
-
-// 3. Build, both sign, execute
-const fullBytes = await sponsoredTx.build({ client: grpcClient });
-const { signature: userSig } = await userKeypair.signTransaction(fullBytes);
-const { signature: sponsorSig } = await sponsorKeypair.signTransaction(fullBytes);
-
-const result = await grpcClient.executeTransaction({
-  transaction: fullBytes,
-  signatures: [userSig, sponsorSig],
-});
-```
-
-Address balance sponsorship (simpler — sender can sign before sponsor):
-
-```ts
-const tx = new Transaction();
-tx.setSender(userAddress);
-tx.setGasOwner(sponsorAddress);
-tx.setGasPayment([]); // address balance for gas
-// ... add commands ...
-
-const bytes = await tx.build({ client: grpcClient });
-const { signature: userSig } = await userKeypair.signTransaction(bytes);
-const { signature: sponsorSig } = await sponsorKeypair.signTransaction(bytes);
-
-const result = await grpcClient.executeTransaction({
-  transaction: bytes,
-  signatures: [userSig, sponsorSig],
-});
-```
-
-For sponsored transactions, set `useGasCoin: false` in `tx.coin()` / `tx.balance()`:
-
-```ts
-tx.transferObjects([tx.coin({ balance: 100n, useGasCoin: false })], recipient);
-```
-
-## BCS
-
-```ts
-import { bcs } from '@mysten/sui/bcs';
-
-bcs.U8.serialize(1);
-bcs.Address.serialize('0x1');
-const effects = bcs.TransactionEffects.parse(bytes);
-```
-
-Do not pass full `objectBcs` envelope bytes to a Move struct parser. Use the object's `content` bytes when parsing Move struct fields.
-
-### Parsing Object Content
-
-```ts
-import { MyStruct } from './generated/my-module';
-
-const { object } = await client.core.getObject({
-  objectId: '0x123...',
-  include: { content: true },
-});
-
-const parsed = MyStruct.parse(object.content);
-```
-
-### Transaction Effects
-
-```ts
-const effects = bcs.TransactionEffects.parse(effectsBytes);
-if (effects.V2.status.$kind === 'Success') {
-  console.log('Transaction succeeded');
-}
-```
-
-## Utils
-
-```ts
-import {
-  MIST_PER_SUI,
-  formatAddress,
-  fromBase64,
-  isValidSuiAddress,
-  normalizeSuiAddress,
-  parseToMist,
-  toBase64,
-  SUI_DECIMALS,
-  SUI_ADDRESS_LENGTH,
-  MOVE_STDLIB_ADDRESS,
-  SUI_FRAMEWORK_ADDRESS,
-  SUI_SYSTEM_ADDRESS,
-  SUI_CLOCK_OBJECT_ID,
-  SUI_SYSTEM_STATE_OBJECT_ID,
-  SUI_RANDOM_OBJECT_ID,
-  formatDigest,
-  normalizeStructTag,
-  normalizeSuiObjectId,
-  normalizeSuiNSName,
-  parseToUnits,
-  isValidSuiObjectId,
-  isValidTransactionDigest,
-  isValidSuiNSName,
-  fromHex,
-  toHex,
-} from '@mysten/sui/utils';
-```
-
-Validate address, object ID, digest, and SuiNS shapes at boundaries — validators do not prove on-chain existence.
-
-## Faucet
-
-```ts
-import { getFaucetHost, requestSuiFromFaucetV2 } from '@mysten/sui/faucet';
-
-await requestSuiFromFaucetV2({
-  host: getFaucetHost('testnet'),
-  recipient: '0xYourAddress',
-});
-```
-
-Faucets are rate-limited. Mainnet has no faucet.
-
-## zkLogin and Multisig
-
-Use `@mysten/sui/zklogin` for zkLogin signatures and address computation. Preserve `legacyAddress` handling when maintaining existing accounts.
-
-Use `@mysten/sui/multisig` for `MultiSigPublicKey` and multisig signing flows.
-
-Treat zkLogin, passkey, and multisig flows as security-sensitive: verify exact docs and existing project conventions before changing production code.
+- **Gas** — automatic gas handling and overrides (`setGasPrice`, `setGasBudget`, `setGasPayment`, `tx.gas` caveats).
+- **Offline and sponsored transactions** — offline building with resolved refs, coin-based and address-balance sponsorship, `useGasCoin: false`.
+- **BCS** — serialization, parsing object content, transaction effects.
+- **Utils** — constants, formatting, validation, and encoding helpers from `@mysten/sui/utils`.
+- **Faucet** — requesting test SUI with `requestSuiFromFaucetV2`.
+- **zkLogin and multisig** — module pointers and security notes.
 
 ## Client Extensions
 
@@ -795,7 +465,7 @@ await client.walrus.writeBlob({ ... });
 
 - The package is imported through current modular subpaths.
 - New code uses `SuiGrpcClient` or a `ClientWithCoreApi` abstraction.
-- **No `SuiJsonRpcClient` or `@mysten/sui/jsonRpc` imports exist. JSON-RPC is deprecated.**
+- **No `SuiJsonRpcClient` or `@mysten/sui/jsonRpc` imports exist outside the documented kiosk/event-query exception (see the `sui-kiosk-sdk-js` skill). JSON-RPC is deprecated.**
 - **No legacy `SuiClient` from `@mysten/sui/client` (pre-v2) exists.**
 - Transaction code matches the Move function signature and object ownership model.
 - Balances and MIST amounts use `bigint` or strings, not unsafe `number` math.

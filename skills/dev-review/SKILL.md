@@ -89,16 +89,12 @@ Code inside strings gets zero help from the host language's compiler — a typo 
 
 ### 4. Second opinion (when available)
 
-An independent reviewer catches blind spots the authoring agent shares with itself. Check for installed cross-agent review paths, in order:
+An independent reviewer catches blind spots the authoring agent shares with itself. Delegate through one of the dedicated review skills — they handle sandboxing, timeouts, and prompt-injection fencing that ad-hoc CLI invocations lack. Check for installed skills, in order (pick a reviewer from a *different* vendor than the authoring agent when possible):
 
 1. `gemini-review-code` skill → `bash ~/.claude/skills/gemini-review-code/scripts/review.sh` (add `--adversarial` for risky changes)
-2. Codex CLI on PATH → non-interactive run:
-   ```bash
-   codex exec --output-last-message /tmp/codex-review.md \
-     "Review the diff below adversarially; report concrete failure scenarios only. $(git diff <base>...HEAD)" </dev/null
-   ```
-   The `</dev/null` redirect is required — codex hangs waiting on stdin without it. Read the verdict from the output file, and re-verify any claim it makes about repo state yourself (`git status`, read the cited lines) before repeating it.
-3. OpenCode / Gemini CLI on PATH → non-interactive review prompt with the diff
+2. `codex-review-code` skill → `bash ~/.claude/skills/codex-review-code/scripts/review.sh` (add `--adversarial` for risky changes)
+3. `claude-review-code` skill → `bash ~/.claude/skills/claude-review-code/scripts/review.sh` (add `--adversarial` for risky changes)
+4. Only if none of the skills is installed, fall back to a raw CLI on PATH (codex / opencode / gemini) with a non-interactive adversarial review prompt over `git diff <base>...HEAD`. Re-verify any claim the reviewer makes about repo state yourself (`git status`, read the cited lines) before repeating it.
 
 Run **one** second-opinion pass, not all of them. If none is available, say so in the verdict ("no second opinion available") — don't silently skip. If the second reviewer contradicts your finding, present both views; don't suppress either.
 

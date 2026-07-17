@@ -1,6 +1,6 @@
 ---
 name: rocksdb
-description: RocksDB embedded LSM-tree key-value store conventions for Rust and Node.js developers — architecture, column families, compaction, transactions, merge operators, BlobDB, bulk ingest, current features (10.x/11.x), library bindings (rocksdb/rust-rocksdb crates; classic-level, @harperfast/rocksdb-js), and usage patterns and antipatterns. Use when embedding RocksDB for local persistence, state stores, queues, or storage engines.
+description: RocksDB embedded LSM-tree key-value store conventions for Rust and Node.js — architecture, column families, compaction, transactions, merge operators, BlobDB, bulk ingest, bindings (rust-rocksdb crate; classic-level, @harperfast/rocksdb-js), patterns and antipatterns. Use when embedding RocksDB for local persistence, state stores, queues, or storage engines.
 ---
 
 # RocksDB

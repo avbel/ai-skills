@@ -121,100 +121,36 @@ Use one of these configuration paths. These settings identify Google Cloud resou
 
 For an existing Tokio-based app, add one `secret.rs` module and import `get_secret()` wherever config is loaded. Prefer reading secrets during startup and passing ordinary config values into the rest of the app.
 
+Do not write the module by hand: `scripts/create-secret-module.sh` generates it (see the Scaffold Script section below). The full listing is in [references/secret-module.md](references/secret-module.md); the script is authoritative if they ever disagree.
+
+The generated module's public API surface:
+
 ```rust
 // src/secret.rs
-use std::env;
-use std::error::Error as StdError;
-use std::fmt;
-use std::string::FromUtf8Error;
-
-use google_cloud_secretmanager_v1::Error as GcpError;
-use google_cloud_secretmanager_v1::client::SecretManagerService;
-use tokio::sync::OnceCell;
-
-static CLIENT: OnceCell<SecretManagerService> = OnceCell::const_new();
-
-#[derive(Debug)]
 pub enum SecretError {
-    SecretManager(GcpError),
+    SecretManager(GcpError),  // google_cloud_secretmanager_v1::Error
     EmptyPayload(String),
     Utf8(FromUtf8Error),
 }
 
-impl fmt::Display for SecretError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::SecretManager(error) => write!(f, "Secret Manager error: {error}"),
-            Self::EmptyPayload(name) => {
-                write!(f, "Secret Manager returned an empty payload for {name}")
-            }
-            Self::Utf8(error) => write!(f, "Secret Manager payload is not valid UTF-8: {error}"),
-        }
-    }
-}
+/// Lazily initializes a shared SecretManagerService (tokio OnceCell) and
+/// reads one secret. Returns Ok(None) when Secret Manager is unconfigured:
+/// no project env var, missing ADC, or a 400/401/403/404-style error.
+pub async fn get_secret(key: &str) -> Result<Option<String>, SecretError>;
 
-impl StdError for SecretError {
-    fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        match self {
-            Self::SecretManager(error) => Some(error),
-            Self::Utf8(error) => Some(error),
-            Self::EmptyPayload(_) => None,
-        }
-    }
-}
-
-pub async fn get_secret(key: &str) -> Result<Option<String>, SecretError> {
-    let Some(name) = secret_version_name(key) else {
-        return Ok(None);
-    };
-
-    let client = match CLIENT
-        .get_or_try_init(|| async { SecretManagerService::builder().build().await })
-        .await
-    {
-        Ok(client) => client,
-        Err(error) if is_secret_manager_unconfigured(error) => return Ok(None),
-        Err(error) => return Err(SecretError::SecretManager(error)),
-    };
-
-    access_secret_name(client, &name).await
-}
-
+/// Same as get_secret() but uses a caller-supplied client (e.g. a mock
+/// built via from_stub in tests).
 pub async fn get_secret_with_client(
     client: &SecretManagerService,
     key: &str,
-) -> Result<Option<String>, SecretError> {
-    let Some(name) = secret_version_name(key) else {
-        return Ok(None);
-    };
+) -> Result<Option<String>, SecretError>;
+```
 
-    access_secret_name(client, &name).await
-}
+The two most instructive internals:
 
-async fn access_secret_name(
-    client: &SecretManagerService,
-    name: &str,
-) -> Result<Option<String>, SecretError> {
-    let response = match client
-        .access_secret_version()
-        .set_name(name.to_owned())
-        .send()
-        .await
-    {
-        Ok(response) => response,
-        Err(error) if is_secret_manager_unconfigured(&error) => return Ok(None),
-        Err(error) => return Err(SecretError::SecretManager(error)),
-    };
-
-    let payload = response
-        .payload
-        .ok_or_else(|| SecretError::EmptyPayload(name.to_owned()))?;
-
-    String::from_utf8(payload.data.to_vec())
-        .map(Some)
-        .map_err(SecretError::Utf8)
-}
-
+```rust
+// `key` may be a short secret ID or a full resource name; the version
+// defaults to `latest` and can be pinned via env.
 fn secret_version_name(key: &str) -> Option<String> {
     let version = secret_manager_version_id();
 
@@ -235,53 +171,10 @@ fn secret_version_name(key: &str) -> Option<String> {
     Some(format!("{parent}/secrets/{key}/versions/{version}"))
 }
 
-fn secret_manager_project_id() -> Option<String> {
-    [
-        "SECRET_MANAGER_PROJECT_ID",
-        "GOOGLE_CLOUD_PROJECT",
-        "GCP_PROJECT",
-        "GCLOUD_PROJECT",
-    ]
-    .into_iter()
-    .find_map(env_non_empty)
-}
-
-fn secret_manager_location() -> Option<String> {
-    env_non_empty("SECRET_MANAGER_LOCATION").or_else(|| env_non_empty("GOOGLE_CLOUD_LOCATION"))
-}
-
-fn secret_manager_version_id() -> String {
-    env_non_empty("SECRET_MANAGER_VERSION")
-        .or_else(|| env_non_empty("GOOGLE_CLOUD_SECRET_VERSION"))
-        .unwrap_or_else(|| "latest".to_owned())
-}
-
-fn env_non_empty(name: &str) -> Option<String> {
-    env::var(name)
-        .ok()
-        .map(|value| value.trim().to_owned())
-        .filter(|value| !value.is_empty())
-}
-
-fn is_secret_manager_unconfigured(error: &GcpError) -> bool {
-    if matches!(error.http_status_code(), Some(400 | 401 | 403 | 404)) {
-        return true;
-    }
-
-    let message = error.to_string().to_ascii_lowercase();
-    [
-        "application default credentials",
-        "could not load default credentials",
-        "could not load the default credentials",
-        "invalid argument",
-        "not found",
-        "permission denied",
-        "secret manager api has not been used",
-        "unauthenticated",
-    ]
-    .iter()
-    .any(|needle| message.contains(needle))
-}
+// "Unconfigured" (-> Ok(None)) means HTTP 400/401/403/404 or an error
+// message about missing ADC, permission denied, not found, or the
+// Secret Manager API not being enabled; anything else is a hard error.
+fn is_secret_manager_unconfigured(error: &GcpError) -> bool { /* ... */ }
 ```
 
 Use it like this:

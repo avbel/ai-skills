@@ -1,6 +1,6 @@
 ---
 name: valkey
-description: Valkey in-memory datastore conventions for Rust and Node.js developers — features, how it differs from Redis, client libraries (redis-rs, fred, valkey-glide, iovalkey, node-redis), Lua/Functions scripting, and common usage patterns and antipatterns. Use when building, reviewing, or debugging code that connects to Valkey (or a Redis-compatible server) for caching, queues, rate limiting, locks, pub/sub, or streams.
+description: Valkey in-memory datastore conventions for Rust and Node.js — how it differs from Redis, client libraries (redis-rs, fred, valkey-glide, iovalkey, node-redis), Lua/Functions scripting, patterns and antipatterns. Use when building or debugging code that talks to Valkey (or a Redis-compatible server) for caching, queues, rate limiting, locks, pub/sub, or streams.
 ---
 
 # Valkey
@@ -61,7 +61,7 @@ const token = await client.get('session:42');
 client.close();
 ```
 
-Use ESM and a single long-lived client (see [js-conventions]). Never open a connection per request.
+Use ESM and a single long-lived client (see the `js-conventions` skill). Never open a connection per request.
 
 ## Lua Scripting
 

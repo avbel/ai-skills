@@ -42,7 +42,7 @@ The script prints JSON with `scenario`, `description`, and `commands` fields.
 RUST_LOG="off,sui_node=info" sui start --with-faucet --force-regenesis
 ```
 
-- `--with-faucet` starts a local faucet on `http://127.0.0.1:9123/gas`.
+- `--with-faucet` starts a local faucet on `http://127.0.0.1:9123/v2/gas`.
 - `--force-regenesis` creates a new genesis each time; removes persisted state.
 - To preserve state across restarts, omit `--force-regenesis` and run `sui genesis -f --with-faucet` once first.
 - The local RPC defaults to `http://127.0.0.1:9000`.
@@ -81,53 +81,53 @@ sui move new usdc
 Write `sources/usdc.move`:
 
 ```move
-module usdc::usdc {
-    use sui::coin;
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
+module usdc::usdc;
 
-    /// One-time witness for USDC
-    public struct USDC has drop {}
+use sui::coin::{Self, TreasuryCap};
 
-    /// Create the coin, mint initial supply to publisher,
-    /// freeze metadata (matching Circle's native USDC: 6 decimals).
-    fun init(witness: USDC, ctx: &mut TxContext) {
-        let (treasury, metadata) = coin::create_currency(
-            witness,
-            6,                                  // decimals — matches native USDC
-            b"USDC",                             // symbol
-            b"USD Coin",                         // name
-            b"Mock USDC for local dev testing",  // description
-            option::none(),                      // icon_url
-            ctx,
-        );
-        transfer::public_freeze_object(metadata);
+/// One-time witness for USDC
+public struct USDC has drop {}
 
-        // Mint 1 000 000 USDC (1_000_000 * 10^6 = 1_000_000_000_000 in micro-units)
-        // to the publisher address as initial supply.
-        coin::mint_and_transfer(
-            &mut treasury,
-            1_000_000_000_000,  // 1M USDC with 6 decimals
-            tx_context::sender(ctx),
-            ctx,
-        );
+/// Create the coin, mint initial supply to publisher,
+/// freeze metadata (matching Circle native USDC: 6 decimals).
+fun init(witness: USDC, ctx: &mut TxContext) {
+    let (mut treasury, metadata) = coin::create_currency(
+        witness,
+        6,                                  // decimals — matches native USDC
+        b"USDC",                             // symbol
+        b"USD Coin",                         // name
+        b"Mock USDC for local dev testing",  // description
+        option::none(),                      // icon_url
+        ctx,
+    );
+    transfer::public_freeze_object(metadata);
 
-        // Transfer TreasuryCap to publisher so they can mint more later
-        transfer::public_transfer(treasury, tx_context::sender(ctx));
-    }
+    // Mint 1 000 000 USDC (1_000_000 * 10^6 = 1_000_000_000_000 in micro-units)
+    // to the publisher address as initial supply.
+    coin::mint_and_transfer(
+        &mut treasury,
+        1_000_000_000_000,  // 1M USDC with 6 decimals
+        ctx.sender(),
+        ctx,
+    );
 
-    /// Mint additional USDC. Only the TreasuryCap holder can call this.
-    public entry fun mint(
-        treasury_cap: &mut coin::TreasuryCap<USDC>,
-        amount: u64,
-        recipient: address,
-        ctx: &mut TxContext,
-    ) {
-        let coin = coin::mint(treasury_cap, amount, ctx);
-        transfer::public_transfer(coin, recipient);
-    }
+    // Transfer TreasuryCap to publisher so they can mint more later
+    transfer::public_transfer(treasury, ctx.sender());
+}
+
+/// Mint additional USDC. Only the TreasuryCap holder can call this.
+public fun mint(
+    treasury_cap: &mut TreasuryCap<USDC>,
+    amount: u64,
+    recipient: address,
+    ctx: &mut TxContext,
+) {
+    let coin = coin::mint(treasury_cap, amount, ctx);
+    transfer::public_transfer(coin, recipient);
 }
 ```
+
+The `sui move new` scaffold already sets `edition = "2024.beta"` in `Move.toml`, which this statement-style module requires. `sui::transfer` and `sui::tx_context::TxContext` are implicit imports in Move 2024 and need no `use` statements.
 
 Publish the package:
 
@@ -261,7 +261,7 @@ sui client balance --coin-type <PACKAGE_ID>::usdc::USDC
 ## Troubleshooting
 
 - **`sui start` fails with "address already in use"** — A previous `sui start` is still running. Kill it, or use a different `--network.config` directory.
-- **`sui client faucet` returns error** — The faucet may not be ready yet. Wait 5–10 seconds after `sui start` before requesting. Use `--url http://127.0.0.1:9123/gas` to specify the local faucet explicitly.
+- **`sui client faucet` returns error** — The faucet may not be ready yet. Wait 5–10 seconds after `sui start` before requesting. Use `--url http://127.0.0.1:9123/v2/gas` to specify the local faucet explicitly.
 - **Publish fails with "insufficient gas"** — Run `sui client faucet` first to get SUI. Check with `sui client gas`.
 - **`coin::create_currency` panics at publish** — Ensure the `USDC` witness struct is `public struct USDC has drop {}` (Move 2024) and the module is named `usdc` (must match the struct name in lowercase).
 - **Mint returns "Type not found"** — Use the full `<PACKAGE_ID>::usdc::USDC` type, not just `USDC`. On localnet, the package ID changes every re-genesis.

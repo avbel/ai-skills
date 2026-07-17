@@ -3,6 +3,8 @@ name: hono-js
 description: Hono web framework conventions for JavaScript and TypeScript - routing, middleware, validation, RPC, Hono CLI docs/search, testing with app.request(), adapters, and multi-runtime deployment.
 ---
 
+# Hono
+
 Apply these conventions when writing, modifying, reviewing, or debugging Hono applications.
 
 ## Documentation Workflow

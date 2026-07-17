@@ -1,6 +1,6 @@
 ---
-name: cookbook_rust
-description: Task-to-crate recipe index for common Rust jobs — random values, async runtimes, CLI parsing, compression, concurrency/parallelism, cryptography, databases (rusqlite/sqlx/postgres/SeaORM), date/time (chrono), logging/tracing, encoding (base64/hex/CSV/JSON/TOML), filesystem traversal, networking (TCP/UDP), running external commands, math/science (ndarray/nalgebra/num), regex text processing, and HTTP clients/web scraping. Use when implementing a routine Rust task and you need the idiomatic crate plus a working pattern.
+name: rust-cookbook
+description: Task-to-crate recipe index for common Rust jobs — random, async runtimes, CLI parsing, compression, crypto, databases, date/time, logging, encoding (CSV/JSON/TOML), filesystem traversal, networking, external commands, math, regex, and HTTP clients. Use when implementing a routine Rust task and you need the idiomatic crate plus a working pattern.
 ---
 
 # Rust Cookbook
@@ -265,5 +265,5 @@ Share linear memory via `instance.get_memory`; expose host functions to guests w
 
 - HTTP clients → `reqwest-rust` · Async → `tokio-rust`, `rust-async-conventions`, `futures-util-rust`
 - CLI → `clap-rust` · Errors → `anyhow-rust`, `eyre-rust` · Logging → `tracing-rust`
-- FS → `walkdir-rust`, `tempfile-rust` · General style → `rust-conventions`, `rust-patterns`
+- FS → `walkdir-rust`, `tempfile-rust` · General style → `rust-conventions`, `design-patterns-rust`
 - Design patterns → `design-patterns-rust` · Databases → `clickhouse`, `rocksdb`

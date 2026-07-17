@@ -63,30 +63,30 @@ let mut s = stream::pending::<i32>();
 `StreamExt` provides async combinators similar to `Iterator`:
 
 ```rust
-use tokio_stream::StreamExt;
+use tokio_stream::{self as stream, StreamExt};
 
 // Filter
-let evens = stream.iter(1..=10).filter(|x| *x % 2 == 0);
+let evens = stream::iter(1..=10).filter(|x| *x % 2 == 0);
 
 // Map
-let doubled = stream.iter(1..=10).map(|x| x * 2);
+let doubled = stream::iter(1..=10).map(|x| x * 2);
 
 // Take first N
-let first5 = stream.iter(1..=100).take(5);
+let first5 = stream::iter(1..=100).take(5);
 
 // Skip first N
-let skipped = stream.iter(1..=100).skip(10);
+let skipped = stream::iter(1..=100).skip(10);
 
 // Collect into Vec
-let items: Vec<i32> = stream.iter(1..=10).collect().await;
+let items: Vec<i32> = stream::iter(1..=10).collect().await;
 
 // ForEach — process each item
-stream.iter(1..=10).for_each(|x| async move {
+stream::iter(1..=10).for_each(|x| async move {
     println!("{x}");
 }).await;
 
 // Fold into accumulator
-let sum = stream.iter(1..=10)
+let sum = stream::iter(1..=10)
     .fold(0, |acc, x| acc + x)
     .await;
 
@@ -208,14 +208,16 @@ Most `tokio-stream` wrappers are cancel-safe:
 
 Non-cancel-safe patterns to avoid:
 - `stream.read_exact()` on wrapped TCP streams — use `tokio::io::AsyncReadExt` directly.
-- `stream.try_for_each_concurrent()` — items are dispatched before completion.
+- `try_for_each_concurrent()` (from `futures::StreamExt`) — items are dispatched before completion.
 
 ## Common Patterns
 
 ### Process Stream with Concurrency Limit
 
+`buffer_unordered` comes from `futures::StreamExt`, not `tokio_stream::StreamExt` — add the `futures` crate for this pattern:
+
 ```rust
-use tokio_stream::StreamExt;
+use futures::StreamExt;
 
 let results = source_stream
     .map(|item| async { process(item).await })

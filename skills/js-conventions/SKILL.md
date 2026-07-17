@@ -16,7 +16,7 @@ Apply these conventions in JavaScript and TypeScript projects. These rules are w
 - Read and follow code style rules defined in XO config, ESLint config, or the ESLint/XO section in `package.json`.
 - Use single quotes for strings.
 - Use `const` for variables that are never reassigned. Use `let` only when reassignment is required.
-- Use camelCase for constants and variables. Do not use UPPER_SNAKE_CASE for constants.
+- Use camelCase for constants and variables. Prefer camelCase over UPPER_SNAKE_CASE for constants; note that Biome's recommended `useNamingConvention` (see `biome-js`) still permits CONSTANT_CASE for module-level `const`s, so existing CONSTANT_CASE constants are not lint errors — just don't introduce new ones.
 - Use PascalCase for enum type names.
 - Always wrap `if`, `while`, and `for` bodies in braces, even for single-line bodies.
 - Prefer `switch`/`case` constructions over multiple `if`/`else if` statements when matching a single expression against multiple potential values.

@@ -205,7 +205,7 @@ fn record_checkout() {
 - Use counters for monotonic counts, up-down counters for values that rise and fall, histograms for durations/sizes, and observable instruments for values read during collection.
 - Use units consistently: seconds, milliseconds, bytes, items.
 - Do not create instruments per request. Build them once and reuse them.
-- For observable gauges/counters/up-down counters, keep the handle returned by `.build()` alive for the process lifetime. Dropping observable handles can unregister instruments and has caused SDK pipeline memory growth in real services. Bind handles to `_name`, not bare `_`, and drop them after provider shutdown.
+- For observable gauges/counters/up-down counters, keep the handle returned by `.build()` alive for the process lifetime. Dropping observable handles can unregister instruments and has caused SDK pipeline memory growth in real services. Bind handles to `_name`, not bare `_`, and drop them after provider shutdown. The `otel-observable-handles-rust` skill covers this keep-alive pattern in depth.
 
 ## Logs
 
@@ -234,7 +234,7 @@ OpenTelemetry Rust logs are active, but bridge crates can lag core crate version
 
 - Call `shutdown()` on tracer, meter, and logger providers during graceful shutdown.
 - Shutdown after the application stops accepting new work, but before process exit.
-- Keep observable instrument handles alive until after metric provider shutdown.
+- Keep observable instrument handles alive until after metric provider shutdown (see `otel-observable-handles-rust`).
 - Treat shutdown errors as operational diagnostics; do not hide repeated exporter failures.
 
 ## Helper Script

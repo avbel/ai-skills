@@ -3,6 +3,8 @@ name: nanoprogress-rust
 description: nanoprogress terminal progress bar conventions — builder API, ticks, finalization, TTY/custom writers, thread sharing, and CLI output. Use when writing Rust CLI code that imports 'nanoprogress'.
 ---
 
+# nanoprogress (Rust Progress Bars)
+
 Apply these conventions when using `nanoprogress` in Rust CLI applications.
 
 ## Package Fit

@@ -46,7 +46,6 @@ fn main() {
 
 ```rust
 use dotenvy::dotenv;     // The main loading function
-use dotenvy::dotenv_ok;  // Alias kept for compatibility, same as dotenv()
 ```
 
 ## Loading Functions

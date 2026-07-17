@@ -1,6 +1,6 @@
 ---
 name: clickhouse
-description: ClickHouse columnar OLAP database conventions for Rust and Node.js developers — what it is good/bad at, current features (JSON/Variant/Dynamic types, async inserts, refreshable materialized views, lightweight deletes/updates, vector search), client libraries (clickhouse + clickhouse-rs crates; @clickhouse/client), insert/query patterns, and antipatterns. Use when building analytics, event/log ingestion, or time-series workloads on ClickHouse from application code. For deep ClickHouse schema/MergeTree conventions see the clickhouse-js skill.
+description: ClickHouse columnar OLAP conventions for Rust and Node.js — strengths/limits, JSON/Variant types, async inserts, client libraries (clickhouse/clickhouse-rs crates, @clickhouse/client), insert/query patterns, and antipatterns. Use when building analytics, event/log ingestion, or time-series workloads on ClickHouse. For schema/MergeTree depth see the clickhouse-js skill.
 ---
 
 # ClickHouse
@@ -58,7 +58,7 @@ const rs = await client.query({query: 'SELECT count() FROM events', format: 'JSO
 const data = await rs.json();   // consume the ResultSet (or stream it)
 ```
 
-Use one long-lived client; send large batches (see Patterns). Follow [js-conventions] (ESM, async/await).
+Use one long-lived client; send large batches (see Patterns). Follow the `js-conventions` skill (ESM, async/await).
 
 ## Insert & Query Patterns
 

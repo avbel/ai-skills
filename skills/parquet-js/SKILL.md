@@ -3,6 +3,8 @@ name: parquet-js
 description: Apache Parquet format conventions — file structure, data types, encodings, compression, schema design, predicate pushdown, and Node.js/TypeScript libraries (hyparquet, parquet-wasm, DuckDB). Use when reading, writing, or designing Parquet-based data pipelines.
 ---
 
+# Apache Parquet (JavaScript)
+
 Apply these conventions when working with Apache Parquet files.
 
 ## File Structure
@@ -177,7 +179,7 @@ Use the ESM/browser entry (`parquet-wasm` or `parquet-wasm/esm`) only after `awa
 
 ### @duckdb/node-api — SQL on Parquet
 
-Best for: complex queries, joins, aggregations, automatic predicate pushdown (~30 MB).
+Best for: complex queries, joins, aggregations, automatic predicate pushdown (~30 MB). Client setup, version pin, and general usage live in the `duckdb-js` skill — below is only the Parquet-specific surface.
 
 ```typescript
 import { DuckDBInstance } from '@duckdb/node-api'

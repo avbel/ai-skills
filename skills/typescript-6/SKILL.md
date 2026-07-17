@@ -1,7 +1,9 @@
 ---
 name: typescript-6
-description: TypeScript 6.0 (March 2026) conventions — the final JS-based compiler before the Go-native 7.0 rewrite. New defaults (strict, module esnext, target es2025, types []), language features (less context-sensitive this-less functions, #/ subpath imports, --moduleResolution bundler + --module commonjs), new built-in types (Temporal, Map upsert, RegExp.escape), and deprecations (baseUrl, target es5, --downlevelIteration, --moduleResolution node, AMD/UMD/SystemJS, import assertions). Use when configuring or upgrading to TypeScript 6.
+description: TypeScript 6.0 (March 2026) conventions — the final JS-based compiler before the Go-native 7.0 rewrite. New strict defaults (module esnext, target es2025), this-less functions, subpath imports, built-in Temporal/Map upsert/RegExp.escape types, and deprecations (baseUrl, es5, node resolution, AMD/UMD). Use when configuring or upgrading to TypeScript 6.
 ---
+
+# TypeScript 6.0
 
 Apply these conventions when working with TypeScript 6.0+ (released 2026-03-23). 6.0 is a **bridge release** — the final version on the JavaScript-based compiler. The next major (7.0) is a Go-native rewrite. Most 6.0 changes are about modern defaults and deprecations; the goal is to make the 7.0 jump uneventful.
 

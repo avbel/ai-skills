@@ -103,8 +103,8 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `eyre-rust` | `Report`, `WrapErr`, custom handlers, `eyre!`, anyhow migration |
 | `futures-util-rust` | `StreamExt`, `FutureExt`, `TryStreamExt`, `select!`, `join`, sinks |
 | `google-cloud-secret-manager-rust` | Secret Manager, ADC/IAM, versioned lookup |
-| `hotpath-rs` | Rust profiling: timing, allocations, CPU, Tokio, MCP |
-| `high_performance_rust` | Build config, allocators, type sizes, hashers, hot-path I/O, rayon, profiling |
+| `hotpath-rust` | Rust profiling: timing, allocations, CPU, Tokio, MCP |
+| `rust-high-performance` | Build config, allocators, type sizes, hashers, hot-path I/O, rayon, profiling |
 | `hud-tokio-profiler` | eBPF zero-instrumentation profiler for Tokio worker blocking; tool comparison |
 | `moka-rust` | `sync::Cache`, `future::Cache`, TTL/TTI, eviction, weighted |
 | `nanoprogress-rust` | Terminal progress bar conventions  |
@@ -130,9 +130,9 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `rust-async-conventions` | Futures, Send/Sync, join/select, streams, pinning, cancellation |
 | `rust-wasm-conventions` | wasm-bindgen, wasm-pack, JS interop, binary size |
 | `design-patterns-rust` | Idioms, GoF patterns (Builder/Strategy/State/RAII), anti-patterns, principles |
-| `cookbook_rust` | Task-to-crate recipe index: random, async, CLI, compression, db, regex, HTTP |
-| `macros_rust` | macro_rules! fragments/repetitions/hygiene, TT munchers, proc macros (syn/quote) |
-| `high_assurance_rust` | Static/dynamic/operational assurance, threat modeling, unsafe discipline, supply-chain, fuzzing |
+| `rust-cookbook` | Task-to-crate recipe index: random, async, CLI, compression, db, regex, HTTP |
+| `rust-macros` | macro_rules! fragments/repetitions/hygiene, TT munchers, proc macros (syn/quote) |
+| `rust-high-assurance` | Static/dynamic/operational assurance, threat modeling, unsafe discipline, supply-chain, fuzzing |
 | `power-rust` | Prompt patterns that reduce LLM Rust bugs (versions, cancel-safety, SAFETY) |
 
 ### JavaScript / TypeScript — libs & tools

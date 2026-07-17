@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 PACKAGE_ID="${1:-}"
 OUTPUT_DIR="${2:-}"
@@ -9,8 +9,20 @@ if [ -z "$PACKAGE_ID" ]; then
   exit 2
 fi
 
+# Cleanup trap: remove the auto-created temp output directory on failure.
+# On success the directory holds the deliverables and is kept.
+TEMP_OUTPUT_DIR=""
+cleanup() {
+  local status=$?
+  if [ "$status" -ne 0 ] && [ -n "$TEMP_OUTPUT_DIR" ]; then
+    rm -rf "$TEMP_OUTPUT_DIR"
+  fi
+}
+trap cleanup EXIT
+
 if [ -z "$OUTPUT_DIR" ]; then
   OUTPUT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/sui-package-${PACKAGE_ID:2:8}.XXXXXX")"
+  TEMP_OUTPUT_DIR="$OUTPUT_DIR"
 fi
 
 MODULE_DIR="$OUTPUT_DIR/modules"
@@ -43,8 +55,19 @@ if (!moduleMap || typeof moduleMap !== 'object') {
   throw new Error('Package JSON did not contain content.Package.module_map');
 }
 
+function moduleBytesToBuffer(value) {
+  // Some clients return module bytes as a base64 string, others as a byte array.
+  if (typeof value === 'string') {
+    return Buffer.from(value, 'base64');
+  }
+  if (Array.isArray(value) || value instanceof Uint8Array) {
+    return Buffer.from(value);
+  }
+  throw new Error(`Unsupported module_map value type: ${Object.prototype.toString.call(value)}`);
+}
+
 for (const [name, bytes] of Object.entries(moduleMap)) {
-  fs.writeFileSync(path.join(moduleDir, `${name}.mv`), Buffer.from(bytes));
+  fs.writeFileSync(path.join(moduleDir, `${name}.mv`), moduleBytesToBuffer(bytes));
 }
 
 process.stderr.write(JSON.stringify(Object.keys(moduleMap)));

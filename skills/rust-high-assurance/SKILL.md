@@ -1,11 +1,11 @@
 ---
-name: high_assurance_rust
-description: Build secure, robust, justifiably-trustworthy Rust — the static/dynamic/operational assurance taxonomy, threat modeling (STRIDE, shift-left, risk = likelihood × severity), what Rust's memory safety does and does NOT prevent (spatial/temporal/type safety, the weird-machine model), disciplined unsafe (#![forbid(unsafe_code)], safe abstractions, soundness), robustness/high-availability (fallible APIs, OOM via try_reserve, no-panic), portability (no_std/heapless, freestanding binaries), supply-chain hardening (cargo-audit/RustSec, reproducible builds, Cargo.lock, rust-toolchain.toml, pinned git deps), the recommended toolchain (clippy lint groups, rustfmt, rustdoc doc-tests, cargo-modules/binutils), differential fuzzing, and formal methods (model checking, deductive verification). Use when assurance, security, robustness, safety-critical, or verification matter — not just "does it compile".
+name: rust-high-assurance
+description: Build justifiably-trustworthy Rust — threat modeling, what memory safety does and does NOT prevent, disciplined unsafe, robustness (fallible APIs, try_reserve, no-panic), no_std portability, supply-chain hardening (cargo-audit, lockfiles, pinned toolchains), fuzzing, and formal methods. Use when security, assurance, or safety-critical robustness matter — not just "does it compile".
 ---
 
 # High Assurance Rust
 
-Practices from *High Assurance Rust* (Tiemoko Ndogga) for software you can **justifiably trust** — enough evidence to back confidence in functionality *and* security. Goal: minimize vulnerabilities and make attacks impractical, not "impossible". Complements `rust-conventions`, `rust-testing`, `power-rust`; this skill is about the *assurance* layer above "it compiles".
+Practices from *High Assurance Rust* (Tiemoko Ndogga) for software you can **justifiably trust** — enough evidence to back confidence in functionality *and* security. Goal: minimize vulnerabilities and make attacks impractical, not "impossible". Complements `rust-conventions`, `dev-testing`, `power-rust`; this skill is about the *assurance* layer above "it compiles".
 
 ## Core framing
 
@@ -79,7 +79,7 @@ For software that "must survive" (no patches, no failures):
 
 ## Dynamic assurance — testing & fuzzing
 
-- **Unit + integration + doc tests** are the baseline; fallible and incomplete but high-value (see `rust-testing`). Test with officially-released **test vectors** where they exist (e.g. crypto).
+- **Unit + integration + doc tests** are the baseline; fallible and incomplete but high-value (see `dev-testing`). Test with officially-released **test vectors** where they exist (e.g. crypto).
 - **Property-based testing** (`proptest`/`quickcheck`) — assert invariants over generated inputs, not hand-picked cases.
 - **Differential fuzzing** — run your implementation and a trusted reference (e.g. std collection) on the same fuzzer-generated inputs and assert identical behavior; surfaces divergences pure unit tests miss. Use `cargo-fuzz` (libFuzzer) or `afl.rs`.
 - **Sanitizers / `Miri`** — run tests under `Miri` to catch UB in `unsafe` Rust. Note `Miri` **cannot execute FFI / `extern` calls** — for FFI-heavy code pivot to `cargo-careful` or build with ASan/TSan (`-Zsanitizer`, nightly).
@@ -102,5 +102,5 @@ For software that "must survive" (no patches, no failures):
 
 ## Cross-references
 
-- Testing mechanics → `rust-testing` · General style → `rust-conventions` · LLM-bug reduction → `power-rust`
-- Types/invariants → `design-patterns-rust` · Errors → `anyhow-rust`, `eyre-rust` · Binary hardening/size → `high_performance_rust`
+- Testing workflow → `dev-testing` · General style → `rust-conventions` · LLM-bug reduction → `power-rust`
+- Types/invariants → `design-patterns-rust` · Errors → `anyhow-rust`, `eyre-rust` · Binary hardening/size → `rust-high-performance`

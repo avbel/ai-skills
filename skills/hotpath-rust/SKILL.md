@@ -1,5 +1,5 @@
 ---
-name: hotpath-rs
+name: hotpath-rust
 description: Use when profiling Rust applications with pawurb/hotpath-rs: timing, allocations, CPU sampling, Tokio runtime metrics, async channels/streams/futures, static reports, live TUI, MCP server integration, or AI-assisted performance analysis.
 ---
 
@@ -329,11 +329,11 @@ Common environment variables:
 Generate starter snippets without loading extra context:
 
 ```bash
-bash /mnt/skills/user/hotpath-rs/scripts/hotpath-rs-bootstrap.sh basic
-bash /mnt/skills/user/hotpath-rs/scripts/hotpath-rs-bootstrap.sh tokio
-bash /mnt/skills/user/hotpath-rs/scripts/hotpath-rs-bootstrap.sh data-flow
-bash /mnt/skills/user/hotpath-rs/scripts/hotpath-rs-bootstrap.sh mcp
-bash /mnt/skills/user/hotpath-rs/scripts/hotpath-rs-bootstrap.sh cpu
+bash /mnt/skills/user/hotpath-rust/scripts/hotpath-rust-bootstrap.sh basic
+bash /mnt/skills/user/hotpath-rust/scripts/hotpath-rust-bootstrap.sh tokio
+bash /mnt/skills/user/hotpath-rust/scripts/hotpath-rust-bootstrap.sh data-flow
+bash /mnt/skills/user/hotpath-rust/scripts/hotpath-rust-bootstrap.sh mcp
+bash /mnt/skills/user/hotpath-rust/scripts/hotpath-rust-bootstrap.sh cpu
 ```
 
 The script prints JSON with a `scenario`, `cargo`, `command`, and `snippet` field.
