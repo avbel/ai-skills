@@ -1,14 +1,23 @@
 ---
 name: gemini-review-code
-description: Run a code review of local git changes by delegating to the Antigravity CLI (`agy`). Use when the user says "review my code/changes with Gemini/Antigravity", "agy review", "second-opinion review", or wants an external agent to review the working tree or branch diff. Review-only — never fixes code.
+description: Run a second-opinion code review of local git changes by delegating to the Antigravity CLI (`agy`), forced onto Gemini Pro at its maximum (High) thinking level. Use when the user says "review my code/changes with Gemini/Antigravity", "agy review", "second-opinion review", or wants an external agent to review the working tree or branch diff. Review-only — never fixes code.
 ---
 
 # Gemini Review Code
 
 Delegate a code review of your local git state to Google's Antigravity CLI
-(command `agy`). This is the Antigravity equivalent of the Codex review plugin:
-it detects what changed, captures the exact diff into a self-contained review
-brief, hands it to `agy` running non-interactively, and returns the verdict.
+(command `agy`). This is the Gemini counterpart to the `claude-review-code` and
+`codex-review-code` skills: it detects what changed, captures the exact diff into
+a self-contained review brief, hands it to `agy` running non-interactively, and
+returns the verdict.
+
+The review is **forced onto Gemini Pro at its maximum thinking level**
+(`--model 'Gemini 3.1 Pro (High)'`), independent of `agy`'s default (Flash). In
+Antigravity, Pro is exposed at only two thinking levels — Low and High — so
+`(High)` *is* Pro's maximum effort (the third, middle level exists only for
+Flash). The point is a maximal-effort, independent second opinion — useful as the
+cross-agent validation step this repo requires before merging a new skill (see
+the root `AGENTS.md`).
 
 **This skill is review-only.** It never edits, fixes, or stages anything — its
 single job is to run the review and surface `agy`'s output. If the review finds
@@ -35,8 +44,9 @@ bash /mnt/skills/user/gemini-review-code/scripts/review.sh [options] [focus text
 **Options:**
 - `--scope auto|working-tree|branch` — what to review. Defaults to `auto`.
 - `--base <ref>` — base ref for `branch` scope (e.g. `--base develop`). Defaults to `origin/HEAD` → `main` → `master`.
+- `--model <id>` — pin the Antigravity model. Defaults to `Gemini 3.1 Pro (High)`; can also be set via the `AGY_REVIEW_MODEL` env var. The model string is a display name that changes with the Gemini version — run `agy models` to see the exact strings your install accepts (e.g. `Gemini 3.1 Pro (High)`, and Claude/Opus options are exposed there too).
 - `--adversarial` — challenge framing: the reviewer tries to break confidence in the change and report why it should not ship, rather than a balanced pass.
-- `--timeout <duration>` — print-mode wait passed to `agy --print-timeout`. Defaults to `10m`.
+- `--timeout <duration>` — print-mode wait passed to `agy --print-timeout`. Defaults to `15m` (Pro at High thinking is slower than the Flash default).
 - `focus text` — any trailing words become a reviewer focus hint (e.g. `concurrency in the queue worker`).
 
 **Examples:**
@@ -114,5 +124,6 @@ If the user wants changes applied, treat that as a separate follow-up task.
 - **`'agy' ... is not installed`** — install the Antigravity CLI and run `agy install`, then retry.
 - **`not inside a git working tree`** — `cd` into the repository first.
 - **`Nothing to review`** — there are no changes for the chosen scope. For a clean working tree, pass `--scope branch` (optionally with `--base`).
-- **Timeout / empty output** — large diffs take longer; raise `--timeout` (e.g. `--timeout 20m`). On first use, `agy` may require authentication — run `agy -p "hello"` once interactively to complete sign-in.
-- **Review seems to ignore repository context** — by design, the agent sees only the diff (passed inline), not the surrounding files. Widen the diff (e.g. include more files in the change) if more context is needed.
+- **Timeout / empty output** — Pro at High thinking is slow; raise `--timeout` (e.g. `--timeout 30m`). On first use, `agy` may require authentication — run `agy -p "hello"` once interactively to complete sign-in.
+- **`unknown model` / model not found** — the display string changed with the Gemini version. Run `agy models` and pass the exact string via `--model` or `AGY_REVIEW_MODEL` (e.g. a newer `Gemini 3.x Pro (High)`).
+- **Review lacks repository context** — the agent is granted read access to the repo (`--add-dir`) and told to read surrounding files, but the precise change is the inline diff. Widen the diff (include more files in the change) if a finding needs code outside the changed set.

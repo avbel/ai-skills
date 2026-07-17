@@ -193,7 +193,7 @@ Cross-language workflow skills sharing one philosophy: cheapest sufficient proce
 | Skill | Covers |
 |-------|--------|
 | `code-review` | Production-focused reviews: observability, compat, migrations, idempotency, PR quality |
-| `gemini-review-code` | Delegate a local git code review to Antigravity (`agy`) |
+| `gemini-review-code` | Delegate a local git code review to Antigravity (`agy`, Gemini Pro/High) |
 | `claude-review-code` | Delegate a local git code review to Claude Code (`claude`, Opus/xhigh) |
 | `codex-review-code` | Delegate a local git code review to Codex (`codex`, GPT/xhigh) |
 

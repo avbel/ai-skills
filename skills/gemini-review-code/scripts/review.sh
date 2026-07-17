@@ -19,8 +19,16 @@ set -euo pipefail
 SCOPE="auto"
 BASE=""
 ADVERSARIAL="false"
-TIMEOUT="10m"
+TIMEOUT="15m"
 FOCUS=""
+
+# The forced review configuration: Gemini Pro at its maximum thinking level.
+# In Antigravity, Pro is exposed at two thinking levels — Low and High — so
+# "(High)" IS Pro's max effort (only Flash has a third, middle level). The model
+# string is a display name that churns with the Gemini version (3.1, 3.x, ...);
+# override it with --model or the AGY_REVIEW_MODEL env var, and run `agy models`
+# to see the exact strings your install accepts.
+REVIEW_MODEL="${AGY_REVIEW_MODEL:-Gemini 3.1 Pro (High)}"
 
 # Max bytes of diff to embed in the prompt. agy --print takes the prompt as a
 # single argv string, bounded by the OS ARG_MAX (~1 MB on macOS); cap the diff
@@ -36,6 +44,10 @@ while [ $# -gt 0 ]; do
       ;;
     --base)
       BASE="${2:-}"
+      shift 2
+      ;;
+    --model)
+      REVIEW_MODEL="${2:-}"
       shift 2
       ;;
     --adversarial)
@@ -180,7 +192,7 @@ DIFF_BODY="$(truncate_field "$DIFF_BODY" "diff")"
 [ -n "$UNTRACKED_BODY" ] && UNTRACKED_BODY="$(truncate_field "$UNTRACKED_BODY" "untracked file content")"
 
 echo "Scope: $EFFECTIVE_SCOPE | Target: $TARGET_LABEL" >&2
-echo "Building review brief and invoking agy (timeout $TIMEOUT)..." >&2
+echo "Building review brief and invoking agy (model='$REVIEW_MODEL', timeout $TIMEOUT)..." >&2
 
 # ---- review framing -------------------------------------------------------
 if [ "$ADVERSARIAL" = "true" ]; then
@@ -318,6 +330,7 @@ EOF
 # for UNTRUSTED third-party code, run inside a container/VM (see SKILL.md
 # "Security"). cwd is already the repo root.
 agy --print "$BRIEF" \
+  --model "$REVIEW_MODEL" \
   --print-timeout "$TIMEOUT" \
   --add-dir "$GIT_ROOT" \
   --sandbox
