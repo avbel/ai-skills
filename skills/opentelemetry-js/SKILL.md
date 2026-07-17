@@ -12,7 +12,7 @@ Primary source: OpenTelemetry JavaScript docs at `https://opentelemetry.io/docs/
 ## First Checks
 
 1. Identify module/runtime shape: CommonJS vs ESM, TypeScript runner (`tsx`, compiled JS, ts-node), package manager, Node version, and app entrypoint.
-2. The OTel JS SDK 2.x line (and `@opentelemetry/sdk-node` ≥ 0.200) requires Node `^18.19.0 || >=20.6.0`. Older Node 14/16/18.0–18.18 are unsupported — verify the runtime before debugging missing spans.
+2. The OTel JS SDK 2.x line (current stable `2.9.0`; `@opentelemetry/sdk-node` ≥ 0.200, currently `0.220.0`; `@opentelemetry/auto-instrumentations-node` currently `0.78.0`) requires Node `^18.19.0 || >=20.6.0`. Older Node 14/16/18.0–18.18 are unsupported — verify the runtime before debugging missing spans. CI now also builds on Node 26, but Node 26 is not yet an officially supported runtime.
 3. Check whether instrumentation must run before any app imports. It almost always should.
 4. Prefer existing project logging/config/env conventions over inventing new wrappers.
 5. Keep production exporter endpoints, headers, and sampling in environment variables unless the repo already centralizes them in config code.
@@ -175,6 +175,8 @@ instrumentations: [
 
 For Express, register HTTP instrumentation too. Always check the package README for supported library versions when spans are missing.
 
+The HTTP, Fetch, XMLHttpRequest, and gRPC instrumentations now emit only stable HTTP / network semantic conventions. `OTEL_SEMCONV_STABILITY_OPT_IN` and the `semconvStabilityOptIn` per-instrumentation option no longer toggle old (`v1.7.0`) or duplicate (`http`, `http/dup`) attribute output — those keys are silently ignored. If dashboards or alerts depended on the old attribute names (e.g. `http.method` instead of `http.request.method`), update them before upgrading past `auto-instrumentations-node` 0.78.
+
 ## Manual Traces
 
 Use manual spans for business operations that auto-instrumentation cannot see:
@@ -240,6 +242,8 @@ The Node SDK detects process and runtime resources by default and reads `OTEL_RE
 
 HTTP and common framework/client instrumentation usually propagates trace context automatically. Only use manual propagation for custom protocols, queues without supported instrumentation, or hand-rolled transports. In those cases, use the OpenTelemetry propagation API to inject and extract context rather than creating ad hoc trace headers.
 
+Prefer W3C `tracecontext` (the default). The Jaeger propagator (`@opentelemetry/propagator-jaeger`) is deprecated as of SDK 2.9 — selecting it via `OTEL_PROPAGATORS` or declarative config now emits a deprecation warning, and the package will be removed in JS SDK 3.x (planned for ~September 2026).
+
 ## Sampling
 
 Default JavaScript SDK behavior samples all traces. For production volume control, prefer environment configuration:
@@ -272,6 +276,7 @@ Use code-level samplers only when the repo already keeps telemetry policy in cod
 - Adding OTel logs by default while the JS logs signal is still in development.
 - Trusting inbound `baggage` headers at face value — core SDK caps processing at 8192 bytes (v2.8.0); reject or sanitize untrusted baggage before propagating it.
 - Targeting `BasicTracerProvider`/`NodeTracerProvider` for env-driven exporter or propagator config — that wiring moved to `NodeSDK` in JS SDK 2.x.
+- Adopting `@opentelemetry/shim-opentracing`, `@opentelemetry/shim-opencensus`, or `@opentelemetry/propagator-jaeger` in new code — all three are deprecated and will be removed in JS SDK 3.x (planned for ~September 2026) per the OpenTracing/OpenCensus spec deprecations.
 
 ## Helper Script
 
