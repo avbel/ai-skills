@@ -183,6 +183,7 @@ Cross-language workflow skills sharing one philosophy: cheapest sufficient proce
 | `dev-problem-solving` | Brainstorm approaches, decide, solution doc, reviewed build plan |
 | `dev-review` | Orchestrated review: spec audit, security pass, edge cases, second opinion |
 | `dev-testing` | Integration tests first, in-memory DBs, verified API mocks |
+| `dev-e2e-testing` | Production-parity e2e: real services, local chains, network-fault injection |
 | `dev-debug` | Root-cause debugging, debugger configs for IDEs and CLI |
 | `dev-knowledge` | Capture solved problems as linked notes in docs/knowledge |
 | `dev-code-style` | Moderate comments, no comment noise, self-documenting code |

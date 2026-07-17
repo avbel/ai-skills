@@ -7,6 +7,8 @@ description: Testing strategy for any project — integration tests first, in-me
 
 Bias toward **integration tests** — they verify what users actually experience and survive refactoring. Unit tests are for pure logic with many branches. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
 
+This skill covers the **everyday suite** that runs on every `test` invocation. For the heavier production-parity tier — real brokers, local blockchains, real sockets, network-fault injection, run on demand rather than per commit — see `dev-e2e-testing`.
+
 ## Default Test Plan for a Feature
 
 1. **1–3 integration tests** through the real entry point (HTTP handler, CLI command, job runner) hitting a real-but-local database.

@@ -16,6 +16,7 @@ Pick **one** workflow per task and follow it. Each is a separate skill loaded on
 | "Review this / ready to merge?" | `dev-review` |
 | Bug resisting the first fix; "still broken", debugger setup | `dev-debug` |
 | Writing tests / "how to test this" | `dev-testing` |
+| E2E suite against a real stack; network-failure / resilience testing; SDK smoke tests | `dev-e2e-testing` |
 | Lesson worth keeping; "remember this"; task start in a repo with `docs/knowledge/` | `dev-knowledge` |
 | Writing any code (comments discipline) | `dev-code-style` |
 
