@@ -25,7 +25,7 @@ Prefer, in order:
    - PostgreSQL → `pg-mem` (Node, no server) or embedded binaries (`embedded-postgres` for Rust/Go/Java)
    - SQLite → `:memory:`
    - MongoDB → `mongodb-memory-server`
-   - Redis/Valkey → `ioredis-mock`, or a real `valkey` container
+   - Redis/Valkey → a real `valkey-server` in disposable mode (`--save '' --appendonly no`, `FLUSHALL` between tests) — it's a single static binary, so there's no reason to fake it. Reach for `ioredis-mock` only when no binary/container can run at all (e.g. a locked-down CI sandbox); it reimplements the command set and drifts from real engine behavior.
    - ClickHouse / anything without an embedded mode → containers (next option)
 2. **Testcontainers** (`testcontainers` for Node/Rust/Go/Java/Python) — real engine in Docker, throwaway per suite. Heavier but 100% faithful; use when the in-memory shim diverges from the real dialect (e.g. `pg-mem` lacks some PG features — on the first unsupported-feature error, switch to testcontainers rather than dumbing down the SQL).
 3. **Never** mock the database driver call-by-call — those tests assert your own implementation, not behavior.
