@@ -19,9 +19,9 @@ Apply these conventions when working with the Cacheable ecosystem in Node.js/Typ
 
 ## Current Stable Baseline
 
-Use npm `latest` as the stable baseline for installable APIs. As of this update: `cacheable@2.3.5`, `@cacheable/memory@2.0.9`, `cache-manager@7.2.8`.
+Use npm `latest` as the stable baseline for installable APIs. As of this update: `cacheable@2.5.0`, `@cacheable/memory@2.2.0`, `cache-manager@7.2.9`.
 
-GitHub `main` and the latest GitHub release mention `cacheable@2.4.0` / `@cacheable/memory@2.1.0` features such as `maxTtl`, `CacheableMemoryHooks`, and tag invalidation, but those versions were not present on npm. Do not prescribe those APIs unless the project explicitly depends on a published version that contains them.
+The June 2026 stable line publishes tag-based invalidation, per-store TTLs, `maxTtl`, `CacheableMemoryHooks`, and the `Cacheable` static singleton helpers. These are safe to prescribe when the project depends on the current npm latest line.
 
 ## Setup
 
@@ -38,8 +38,10 @@ const cache = new Cacheable({
   primary: new Keyv({ store: new CacheableMemory({ ttl: '5m', lruSize: 5000 }) }),
   secondary: createRedisKeyv(process.env.REDIS_URL!),
   ttl: '1h',           // default TTL: ms number or shorthand
+  maxTtl: '24h',       // cap all per-entry/store/default TTLs
   nonBlocking: false,  // true favors latency over L2 freshness
   stats: false,        // true enables instance hit/miss/set/delete stats
+  tags: false,         // true enables tag invalidation checks on get/getMany
   namespace: 'myapp',  // isolate shared stores and sync channels
 })
 ```
@@ -53,10 +55,10 @@ Prefer `createKeyv` helpers from Keyv adapters where available; otherwise wrap t
 TTL precedence:
 
 ```
-function-level TTL → storage adapter TTL → cacheable default TTL
+BEFORE_SET hook TTL → operation TTL → storage adapter TTL → cacheable default TTL → capped by maxTtl
 ```
 
-When promoting from L2 to L1, the remaining TTL from L2 is used, capped by the primary store TTL when configured.
+Operation TTL can be a scalar or per-store object: `{ ttl: { primary: '10s', secondary: '5m' } }`. Missing `primary` / `secondary` fields fall back through that store's defaults. When promoting from L2 to L1, the remaining TTL from L2 is used, capped by the primary store TTL and `maxTtl` when configured.
 
 ## CRUD
 
@@ -64,12 +66,13 @@ When promoting from L2 to L1, the remaining TTL from L2 is used, capped by the p
 await cache.set('key', 'value')
 await cache.set('key', 'value', 5000)
 await cache.set('key', 'value', '15m')
+await cache.set('key', 'value', { ttl: { primary: '10s', secondary: '5m' }, tags: ['user:42'] })
 await cache.setMany([{ key: 'a', value: 1 }, { key: 'b', value: 2, ttl: '5m' }])
 
 const val = await cache.get<string>('key')       // T | undefined
 const vals = await cache.getMany<number>(['a', 'b'])
-const raw = await cache.getRaw<string>('key')    // raw metadata
-const rawMany = await cache.getManyRaw(['a', 'b'])
+const raw = await cache.get<string>('key', { raw: true })    // raw metadata
+const rawMany = await cache.getMany<number>(['a', 'b'], { raw: true })
 
 const exists = await cache.has('key')
 const manyExist = await cache.hasMany(['a', 'b'])
@@ -82,7 +85,7 @@ await cache.clear()
 await cache.disconnect()
 ```
 
-In v2, use `getRaw()` / `getManyRaw()` rather than `get(key, { raw: true })` when targeting `cacheable`; older docs and `cache-manager` examples may still show raw options.
+In current `cacheable`, use `get(key, { raw: true })` / `getMany(keys, { raw: true })` for raw metadata. `CacheableMemory` still exposes `getRaw()` / `getManyRaw()` directly.
 
 ## L1/L2 Behavior
 
@@ -114,6 +117,20 @@ cache.wrap(fn, {
 ```
 
 Use stable, low-cardinality keys. Never include raw request bodies, secrets, or unordered objects unless you supply a deterministic key serializer.
+
+## Tag Invalidation
+
+```typescript
+const cache = new Cacheable({ secondary: createRedisKeyv(process.env.REDIS_URL!), tags: true })
+
+await cache.set('page:/users/42', html, { ttl: '10m', tags: ['user:42'] })
+await cache.setMany([{ key: 'page:/users', value: listHtml, tags: ['users'] }])
+
+await cache.tags.invalidateTag('user:42')
+await cache.tags.invalidateTags(['users'])
+```
+
+Tags are disabled by default. Enable `tags: true` on every writer and reader sharing a store; otherwise tag writes are stored without tracking and invalidations are no-ops. Tag checks add one metadata read on `get` / `getMany`. With a shared secondary store, tag metadata lives there and invalidation is visible across instances.
 
 ## getOrSet (Cache-Aside)
 
@@ -181,10 +198,12 @@ import { Keyv } from 'keyv'
 
 const mem = new CacheableMemory({
   ttl: '1h',
+  maxTtl: '24h',       // cap immortal/oversized entry TTLs
   lruSize: 5000,         // 0 = no LRU eviction
   useClones: true,       // false shares object references
   checkInterval: 60000,  // 0 = lazy expiry only
   storeHashSize: 16,     // multiple Maps to avoid single-Map limits
+  stats: false,
 })
 
 mem.set('k', 'v')
@@ -195,12 +214,27 @@ mem.clear()
 mem.size
 mem.getRaw('k')
 mem.getManyRaw(['k'])
+mem.items
+mem.keys
 
 const keyv = new Keyv({ store: new KeyvCacheableMemory({ ttl: 60000, lruSize: 5000 }) })
 const cachedFn = mem.wrap((n: number) => n * 2, { ttl: '1h', key: 'double' })
 ```
 
-For large objects, consider `useClones: false` only if callers will not mutate cached values.
+For large objects, consider `useClones: false` only if callers will not mutate cached values. `CacheableMemory` hooks are synchronous: `async` hook handlers are skipped, not awaited.
+
+### CacheableMemory Hooks
+
+```typescript
+import { CacheableMemory, CacheableMemoryHooks } from '@cacheable/memory'
+
+const mem = new CacheableMemory()
+mem.onHook(CacheableMemoryHooks.BEFORE_SET, (item) => {
+  item.ttl = '1h'
+})
+```
+
+Stable hooks include before/after variants for `set`, `setMany`, `get`, `getMany`, `delete`, `deleteMany`, and `clear`.
 
 ## cache-manager (NestJS-Compatible)
 
@@ -270,5 +304,8 @@ Sync updates only the primary storage layer of peer instances. Secondary storage
 - Cache misses are `undefined` in `cacheable` and `cache-manager` v7; avoid `null` sentinels.
 - `clear()` affects all configured stores; avoid it on shared Redis/Valkey namespaces.
 - `nonBlocking: true` favors latency over immediate L2 consistency.
+- For non-blocking Redis secondaries, prefer `createKeyvNonBlocking()` from `@keyv/redis` or set `disableOfflineQueue`, no reconnect strategy, `throwOnConnectError: false`, and `nonBlocking: true` together.
 - Use explicit namespaces for shared stores and distributed sync.
-- Do not use unreleased `maxTtl`, tag invalidation, or `CacheableMemoryHooks` just because GitHub `main` documents them; confirm the installed npm version first.
+- `tags: true` must be enabled on every process sharing the tagged store; disabled readers ignore tag freshness.
+- Default `cacheable` primary is `@cacheable/memory` via `createKeyv()` and does not expose Keyv `iterator()`; walk the underlying `CacheableMemory.items` or use an iterable `new Keyv()` primary when iteration is required.
+- `Cacheable.getStaticInstance()` is process-global and long-lived; `clear()` / `disconnect()` affects all callers, and CJS/ESM builds each get their own singleton.
