@@ -10,8 +10,9 @@ Use these conventions for testing JavaScript/TypeScript projects with `vitest-de
 ## Source Baseline
 
 - Prefer official docs at `vitest.dev` and the matching GitHub release over older Jest-era snippets.
-- Current stable baseline checked for this skill: Vitest `4.1.9` (June 2026). Vitest `5.0.0-beta.5` exists but is not the stable `latest` tag.
-- Vitest 4.1.9 supports **Vite `^6.0.0 || ^7.0.0 || ^8.0.0`** and **Node.js `^20.0.0 || ^22.0.0 || >=24.0.0`**.
+- Current stable baseline checked for this skill: Vitest `4.1.10` (July 2026). Vitest `5.0.0-beta.7` exists but is not the stable `latest` tag.
+- Vitest 4.1.10 supports **Vite `^6.0.0 || ^7.0.0 || ^8.0.0`** and **Node.js `^20.0.0 || ^22.0.0 || >=24.0.0`**.
+- Treat `main` branch README/package metadata as prerelease when it disagrees with `latest`; use npm `dist-tags.latest` plus the versioned docs for stable support floors.
 - Vitest is Vite-native: it reuses the project's Vite config, transforms, and resolvers — do not bolt Babel on top unless a transform is missing.
 - Vitest's `vi` API is Jest-compatible enough that most `jest.*` calls map 1:1 to `vi.*`, but the runtime, ESM handling, and mocking semantics differ — do not assume Jest behavior.
 
@@ -237,13 +238,14 @@ Prefer config over per-test resets:
 // vitest.config.ts
 test: {
   clearMocks: true,    // mock.calls/results cleared between tests
-  restoreMocks: true,  // spies returned to original, mocks reset
+  restoreMocks: true,  // vi.spyOn originals restored before each test
 }
 ```
 
 - `clearMocks: true` ≈ `vi.clearAllMocks()` before each test.
-- `restoreMocks: true` ≈ `vi.restoreAllMocks()` before each test. This also implies reset.
-- `mockReset: true` ≈ `vi.resetAllMocks()`.
+- `restoreMocks: true` ≈ `vi.restoreAllMocks()` before each test. In Vitest 4 this restores only spies created manually with `vi.spyOn`; it does not reset automocks.
+- `mockReset: true` ≈ `vi.resetAllMocks()` before each test and resets implementations.
+- Do not enable global reset/restore options blindly for `test.concurrent`; one finished test can clear or restore mocks still used by sibling tests.
 
 ## Snapshots
 
@@ -365,7 +367,8 @@ test: {
 
 - Vitest 4 requires you to set `coverage.include` explicitly — there is no `coverage.all` and no implicit `coverage.extensions`.
 - `provider: 'v8'` is fast and uses native V8 coverage. Switch to `'istanbul'` only if you need its instrumentation features (e.g. branch coverage on transpiled code).
-- Use `// v8 ignore next` / `// v8 ignore start ... // v8 ignore stop` for targeted ignores. Vitest 4 no longer counts empty lines as ignored automatically.
+- Use `/* v8 ignore next -- @preserve */` / `/* v8 ignore start -- @preserve */ ... /* v8 ignore stop -- @preserve */` for TypeScript-transformed source; esbuild strips ordinary comments. Vitest 4 no longer counts empty lines as ignored automatically.
+- In AI-agent environments, Vitest trims default `text` coverage output (`skipFull: true`) and adds `text-summary`; missing 100%-covered files from terminal output is expected, not a coverage collection failure.
 
 ## Pool & Isolation (v4)
 
