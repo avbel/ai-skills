@@ -9,8 +9,9 @@ Apply these conventions when working with Fastify code in node.js projects.
 
 ## Server Setup
 - Fastify 5 targets Node.js 20+. Do not write guidance that assumes Node 18 compatibility for new Fastify 5 apps.
-- Create the Fastify instance with explicit options: `logger: true` (or Pino config object), `trustProxy` when behind a reverse proxy.
+- Create the Fastify instance with explicit options: `logger: true` (or Pino config object), `loggerInstance` for an existing Pino-compatible logger, `trustProxy` when behind a reverse proxy.
 - Set `requestTimeout` when exposed without a reverse proxy; use `handlerTimeout` for application-level route lifecycle timeouts and pass `request.signal` into cancellable work.
+- Do not rely on semicolon query delimiters; Fastify 5 defaults `routerOptions.useSemicolonDelimiter` to `false`. Enable it only for legacy clients that send `/path;foo=bar`.
 - Separate app construction (`app.ts`) from server startup (`server.ts` / `cluster.ts`) to enable testing via `inject()` without starting the server.
 
 ## Plugins & Encapsulation
@@ -28,9 +29,10 @@ Apply these conventions when working with Fastify code in node.js projects.
 - Do not wrap route plugins directly with `fastify-plugin` when relying on `register(..., { prefix })`; `fastify-plugin` makes Fastify-specific register options like `prefix` no-op.
 - Use route-level `schema` for request validation (`body`, `querystring`, `params`, `headers`) and response serialization (`response`).
 - Prefer route-level `handlerTimeout` for slow endpoints instead of only socket timeouts; timeout errors use code `FST_ERR_HANDLER_TIMEOUT` and async work must observe `request.signal` to stop cooperatively.
+- Treat `request.params` as a null-prototype object in Fastify 5; use `Object.hasOwn(request.params, 'id')`, not `request.params.hasOwnProperty(...)`.
 
 ## Validation & Serialization
-- Define JSON Schema (Draft 7) on every route for `body`, `querystring`, `params`, and `response`.
+- Define full JSON Schema (Draft 7) on every route for `body`, `querystring`, `params`, and `response`, including root `type` and `properties`; v5 removed JSON schema shorthand.
 - Share reusable schemas with `fastify.addSchema({ $id, ... })` and reference via `$ref`.
 - Always define `response` schemas — they enable `fast-json-stringify` for serialization performance and prevent accidental leaking of internal fields.
 - Default Ajv settings: `removeAdditional: true`, `useDefaults: true`, `coerceTypes: 'array'`. Be aware that coercion can interact unexpectedly with `anyOf`/nullable types.
@@ -40,6 +42,7 @@ Apply these conventions when working with Fastify code in node.js projects.
 
 ## TypeScript
 - Use a Type Provider (`@fastify/type-provider-typebox` or `@fastify/type-provider-json-schema-to-ts`) to derive request/reply types from route schemas automatically.
+- Mark inline schemas `as const`; custom Fastify 5 type providers must expose separate `validator` and `serializer` schema types, not the old single `output` type.
 - Type decorators via module augmentation (`declare module 'fastify' { interface FastifyInstance { ... } }`).
 - Use `FastifyPluginAsync` for async plugin types. Pass plugin options as a generic parameter.
 
@@ -73,4 +76,5 @@ Apply these conventions when working with Fastify code in node.js projects.
 - Define `response` schemas on all routes for serialization speed.
 - Set appropriate `bodyLimit` per route for large/small payloads instead of raising the global limit.
 - Use `disableRequestLogging: true` or a predicate function for high-throughput/noisy routes where request logs are not needed.
+- Use route/plugin `logLevel` for noisy or high-value endpoints; it applies to route logging, not the global `fastify.log` instance.
 - Avoid multi-parameter and RegExp-heavy hot-path routes; static routes are fastest, then single-param routes.
