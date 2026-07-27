@@ -90,6 +90,29 @@ Apply these conventions in Move projects. Detect the dialect first by inspecting
 - State transitions are one-way from owned to frozen or shared.
 - On-chain objects are publicly readable. Do not store unencrypted secrets.
 
+## Address Balances and Fungible Payments
+
+- Prefer `Balance<T>` parameters and return values for fungible value that does not need object identity.
+- For a payout whose destination is an address, deposit into the recipient's address balance with `balance::send_funds`.
+- If the input is already a `Coin<T>`, deposit it with `coin::send_funds` instead of transferring the coin object.
+- Create or transfer a `Coin<T>` only when the receiving API explicitly requires `Coin<T>` or the coin object's identity matters.
+- Keep composable business logic returning `Balance<T>`; call `send_funds` only at an intentional payment boundary.
+
+```move
+use sui::balance::{Self, Balance};
+use sui::coin::{Self, Coin};
+
+/// Default payout: no coin object is created for the recipient.
+public fun pay<T>(payment: Balance<T>, recipient: address) {
+    balance::send_funds(payment, recipient);
+}
+
+/// Compatibility boundary for an existing coin object.
+public fun deposit_coin<T>(coin: Coin<T>, recipient: address) {
+    coin::send_funds(coin, recipient);
+}
+```
+
 ## Sui Design Patterns
 
 - Capabilities: use `Cap` suffix, gate privileged functions by requiring the capability parameter, and create capabilities in `init`.
@@ -153,4 +176,3 @@ Apply these conventions in Move projects. Detect the dialect first by inspecting
 - Do not clean up in expected-failure tests after the expected abort.
 - Combine decorators as `#[test, expected_failure]`.
 - Use `///` for doc comments and `//` for implementation comments.
-

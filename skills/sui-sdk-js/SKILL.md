@@ -129,144 +129,16 @@ const result = await gqlClient.query({ query });
 
 ## Coins and Address Balances
 
-Sui has **two systems** for holding fungible token balances:
+Prefer address balances for ordinary fungible-token payments and gas:
 
-1. **Coin objects** — individual onchain objects, each with its own ID, version, and balance. You own specific coin objects and need to split, merge, and track them.
-2. **Address balances** — an accumulator per address per coin type. No objects to manage: deposits automatically merge into a single balance, and you withdraw from it as needed.
+- Use `tx.balance()` with `0x2::balance::send_funds` for SUI, custom tokens, and multiple recipients.
+- Use `0x2::coin::send_funds` to deposit an existing `Coin<T>` object into an address balance.
+- Use `tx.coin()` with `transferObjects` only when the recipient or Move API requires `Coin<T>`.
+- Let the SDK select gas automatically, or call `tx.setGasPayment([])` to require SUI address-balance gas.
+- With address-balance gas, `tx.gas` is unavailable; use `tx.balance()` or `tx.coin()` for portable inputs.
+- For sponsored address-balance gas, set the user as sender, the sponsor as gas owner, and `setGasPayment([])`.
 
-An address's total balance = coin object balances + address balance.
-
-### `tx.coin()` and `tx.balance()`
-
-These are the **recommended** ways to get tokens in a transaction. They automatically draw from both coin objects and address balances.
-
-```ts
-import { Transaction, coinWithBalance } from '@mysten/sui/transactions';
-import { MIST_PER_SUI } from '@mysten/sui/utils';
-
-const tx = new Transaction();
-
-// Send SUI via tx.coin() — produces a Coin<T> for transfers
-tx.transferObjects([tx.coin({ balance: 1n * MIST_PER_SUI })], '0xRecipientAddress');
-
-// Or use coinWithBalance() standalone alias
-tx.transferObjects([coinWithBalance({ balance: 1n * MIST_PER_SUI })], '0xRecipientAddress');
-
-// Send to address balance (no coin object created) — preferred for gasless transactions
-tx.moveCall({
-  target: '0x2::balance::send_funds',
-  typeArguments: ['0x2::sui::SUI'],
-  arguments: [tx.balance({ balance: 1n * MIST_PER_SUI }), tx.pure.address('0xRecipientAddress')],
-});
-```
-
-Options for `tx.coin()` and `tx.balance()`:
-
-| Option       | Type               | Default | Description |
-|-------------|--------------------|---------|-------------|
-| `balance`    | `bigint \| number` | required | Amount in base units (MIST for SUI) |
-| `type`       | `string`           | `0x2::sui::SUI` | Coin type |
-| `useGasCoin` | `boolean`          | `true` | For SUI, split from gas coin. Set `false` for sponsored transactions |
-
-Resolution behavior:
-- If sufficient address balance exists, uses `FundsWithdrawal` via `balance::redeem_funds` (no versioned object dependencies, enables parallel execution).
-- Otherwise, fetches coin objects, merges as needed, splits exact amounts.
-- Zero-balance requests resolve to `balance::zero` or `coin::zero` with no network lookups.
-
-### Checking Balances
-
-```ts
-// Get balance for a specific coin type
-const { balance } = await client.core.getBalance({
-  owner: '0xabc...',
-  coinType: '0x2::sui::SUI', // optional, defaults to SUI
-});
-console.log(balance.balance);        // total (coin objects + address balance)
-console.log(balance.coinBalance);    // from coin objects only
-console.log(balance.addressBalance); // from address balance only
-
-// List all coin balances for an owner
-const { balances } = await client.core.listBalances({ owner: '0xabc...' });
-for (const b of balances) {
-  console.log(b.coinType, b.balance);
-}
-
-// List specific coin objects
-const result = await client.core.listCoins({
-  owner: '0xabc...',
-  coinType: '0x2::sui::SUI',
-  limit: 10,
-});
-for (const coin of result.objects) {
-  console.log(coin.objectId, coin.balance);
-}
-
-// Get coin metadata (name, symbol, decimals)
-const { coinMetadata } = await client.core.getCoinMetadata({
-  coinType: '0x2::sui::SUI',
-});
-if (coinMetadata) {
-  console.log(coinMetadata.name, coinMetadata.symbol, coinMetadata.decimals);
-}
-```
-
-All balance values are returned as strings. Use `BigInt(balance.balance)` for arithmetic.
-
-### Direct Address-Balance Withdrawals
-
-Use `tx.withdrawal()` only when you deliberately want a direct `FundsWithdrawal` input. It is the offline-friendly primitive behind address-balance redemption; `tx.coin()` / `tx.balance()` are still preferred for normal online builds because they resolve from both coin objects and address balances.
-
-```ts
-const [coin] = tx.moveCall({
-  target: '0x2::coin::redeem_funds',
-  typeArguments: ['0x2::sui::SUI'],
-  arguments: [tx.withdrawal({ amount: 1_000_000_000n })],
-});
-
-tx.transferObjects([coin], '0xRecipientAddress');
-
-const [balance] = tx.moveCall({
-  target: '0x2::balance::redeem_funds',
-  typeArguments: ['0xPackageId::module::USDC'],
-  arguments: [tx.withdrawal({ amount: 1_000_000n, type: '0xPackageId::module::USDC' })],
-});
-```
-
-### Manual Coin Operations
-
-```ts
-// Split coins
-const [coin1, coin2] = tx.splitCoins('0xMyCoinId', [1_000_000, 2_000_000]);
-
-// Split gas coin for SUI
-const [coin] = tx.splitCoins(tx.gas, [1_000_000_000]);
-
-// Merge coins
-tx.mergeCoins('0xCoin1', ['0xCoin2', '0xCoin3']);
-```
-
-### Gasless Transactions
-
-Transactions built entirely from `tx.balance()` and `balance::send_funds` with `gasPrice = 0` and `gasBudget = 0` can execute without SUI gas fees (allowlisted stablecoins only).
-
-```ts
-const USDC = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
-
-const tx = new Transaction();
-tx.setSender(keypair.toSuiAddress());
-
-tx.moveCall({
-  target: '0x2::balance::send_funds',
-  typeArguments: [USDC],
-  arguments: [tx.balance({ type: USDC, balance: 1_000_000 }), tx.pure.address(recipient)],
-});
-
-// gRPC/GraphQL auto-detect gasless eligibility and set gas price
-const result = await client.signAndExecuteTransaction({
-  transaction: tx,
-  signer: keypair,
-});
-```
+Read [references/coins-and-balances.md](references/coins-and-balances.md) for complete payment, query, withdrawal, gas, sponsorship, and gasless-transfer examples.
 
 ## Query Patterns
 

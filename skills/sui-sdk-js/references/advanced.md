@@ -7,7 +7,7 @@ Reference for the `sui-sdk-js` skill. Read this when configuring gas, building o
 The SDK handles gas automatically in most cases:
 1. **Gas price** — uses network's reference gas price
 2. **Gas budget** — simulates and estimates
-3. **Gas payment** — uses address balances, falls back to coin objects
+3. **Gas payment** — uses the sender's SUI address balance, then falls back to SUI coin objects when needed
 
 Override only when needed:
 
@@ -24,7 +24,7 @@ tx.setGasPayment([
 tx.setGasPayment([]);
 ```
 
-`tx.gas` references the gas coin. Only works when gas is paid from coin objects. When using `setGasPayment([])`, use `tx.coin()` instead.
+`tx.setGasPayment([])` explicitly requires address-balance gas. `tx.gas` references a gas coin and is unavailable in this mode. Use `tx.balance()` or `tx.coin()` for portable transaction inputs that must work with either gas source.
 
 ## Offline and Sponsored Transactions
 
@@ -78,7 +78,7 @@ Address balance sponsorship (simpler — sender can sign before sponsor):
 const tx = new Transaction();
 tx.setSender(userAddress);
 tx.setGasOwner(sponsorAddress);
-tx.setGasPayment([]); // address balance for gas
+tx.setGasPayment([]); // sponsor's SUI address balance pays gas
 // ... add commands ...
 
 const bytes = await tx.build({ client: grpcClient });
@@ -91,10 +91,17 @@ const result = await grpcClient.executeTransaction({
 });
 ```
 
-For sponsored transactions, set `useGasCoin: false` in `tx.coin()` / `tx.balance()`:
+Fund the sponsor's SUI address balance before building or executing the transaction. For sponsored transactions, set `useGasCoin: false` in `tx.coin()` / `tx.balance()` so sender-funded SUI never resolves from the sponsor's gas source:
 
 ```ts
-tx.transferObjects([tx.coin({ balance: 100n, useGasCoin: false })], recipient);
+tx.moveCall({
+  target: '0x2::balance::send_funds',
+  typeArguments: ['0x2::sui::SUI'],
+  arguments: [
+    tx.balance({ balance: 100n, useGasCoin: false }),
+    tx.pure.address(recipient),
+  ],
+});
 ```
 
 ## BCS
