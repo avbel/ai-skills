@@ -17,6 +17,7 @@ Apply these conventions when working with pino logging code.
 - Key options: `level` (default `'info'`), `name`, `base` (default `{pid, hostname}` — set to `undefined` to omit), `timestamp` (default `true`), `messageKey` (default `'msg'`), `errorKey` (default `'err'`).
 - Use `enabled: false` to disable logging entirely (e.g., in tests).
 - Use `nestedKey` to namespace logged objects and avoid key collisions with the log envelope.
+- `depthLimit` (default `5`) and `edgeLimit` (default `100`) only affect Pino's fallback serializer after `JSON.stringify` throws; do not rely on them as general output-size or traversal limits.
 
 ## Log Levels
 - Built-in levels: `trace` (10), `debug` (20), `info` (30), `warn` (40), `error` (50), `fatal` (60), `silent` (Infinity).
@@ -30,6 +31,7 @@ Apply these conventions when working with pino logging code.
 - Create with `logger.child({ module: 'auth' })` — bindings are included in every log from the child.
 - Child loggers inherit parent serializers and level unless overridden.
 - Pass options as the second argument: `logger.child({ module: 'auth' }, { level: 'debug', msgPrefix: '[auth] ' })`.
+- Do not put serializers in child bindings; `bindings.serializers` is deprecated. Use the second argument: `logger.child(bindings, { serializers })`.
 - Creating children is cheap (~259ms for 10,000). Prefer creating a child per module/request over passing context manually.
 - Use `logger.setBindings({ key })` only for process-wide/static context changes after creation; prefer `child()` for scoped context.
 
@@ -51,6 +53,7 @@ Apply these conventions when working with pino logging code.
 ## Transports (Worker Thread)
 - Transports run in a separate worker thread to avoid blocking the main thread.
 - Single transport: `pino({ transport: { target: 'pino-pretty' } })`.
+- If `transport` is supplied in options, do not also pass a second `destination` argument to `pino()`; Pino throws.
 - Multiple targets with level filtering:
   ```js
   pino({
@@ -66,6 +69,7 @@ Apply these conventions when working with pino logging code.
 - Built-in file transport: `target: 'pino/file'` with `options: { destination, mkdir, append }`.
 - Transport options are serialized via Structured Clone — only JSON-compatible values.
 - Transports start asynchronously. Use `transport.on('ready', ...)` if you need to ensure logs flush before exit.
+- Transport worker threads are named for easier identification in diagnostics and profilers.
 - Single `target` or single `pipeline`: only `logger.level` filters logs; a `transport.level` is not applied.
 - Multiple `targets`: `logger.level` is the first gate, then each `targets[i].level` filters again; missing target levels default to `info`.
 - With multiple `targets`, keep the numeric `level` field intact. Do not use `formatters.level` to rename `level` or convert it to a string before routing; transform level labels in a pipeline/custom transport after routing.
@@ -132,6 +136,11 @@ Apply these conventions when working with pino logging code.
 
 ## Diagnostics
 - Subscribe to Node diagnostics/tracing channel events `tracing:pino_asJson:start` and `tracing:pino_asJson:end` only for library-level instrumentation; they expose serialization arguments/results and can be high volume.
+
+## Browser API
+- Browser Pino writes to `console` by default and has a separate API surface from Node destinations/transports.
+- Browser serializers are ignored unless `browser.serialize` is enabled; `serialize: true` or an array also enables the standard error serializer unless `!stdSerializers.err` is included.
+- `browser.reportCaller: true` surfaces a best-effort user callsite by parsing `Error` stacks. Treat it as debugging aid only; stack formats vary and DevTools clickable locations still point at Pino internals.
 
 ## Web Framework Integration
 - **Fastify:** Built-in. Set `logger: true` or pass a pino options object. Access via `request.log` / `reply.log`.
