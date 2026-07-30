@@ -1,0 +1,4 @@
+interface:
+  display_name: "systemd"
+  short_description: "Create, extend, run, and debug systemd units"
+  default_prompt: "Use $systemd to create or troubleshoot a systemd unit, timer, mount, or transient job."
