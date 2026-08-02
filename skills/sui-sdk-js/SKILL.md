@@ -16,6 +16,7 @@ Primary source: Mysten Labs Sui TypeScript SDK docs at `https://sdk.mystenlabs.c
 ## Current Defaults
 
 - Use `@mysten/sui` v2+ docs and imports.
+- If `@mysten/*` packages are installed, read `node_modules/@mysten/*/docs/llms-index.md` first; current packages ship flat LLM docs with the SDK.
 - The SDK is ESM-only. Ensure `package.json` has `"type": "module"` and TypeScript uses `moduleResolution` compatible with ESM, such as `NodeNext`, `Node16`, or `Bundler`.
 - Prefer modular subpath imports like `@mysten/sui/grpc`, `@mysten/sui/transactions`, `@mysten/sui/keypairs/ed25519`, `@mysten/sui/bcs`, and `@mysten/sui/utils`.
 - For new code, prefer `SuiGrpcClient` and the transport-agnostic `client.core` API. In reusable code, accept `ClientWithCoreApi` and call `client.core.*` even when native clients expose shortcuts.
@@ -106,7 +107,7 @@ const grpcClient = new SuiGrpcClient({ network: 'localnet', transport });
 
 ### gRPC Service Clients
 
-For lower-level access beyond the Core API (`transactionExecutionService`, `ledgerService`, `stateService`, `nameService`), read `references/queries.md`.
+For lower-level access beyond the Core API (`transactionExecutionService`, `ledgerService`, `subscriptionService`, `stateService`, `movePackageService`, `nameService`, `signatureVerificationService`), read `references/queries.md`. Prefer Core API query methods unless you need raw gRPC-only filters, checkpoint bounds, or subscriptions.
 
 ### GraphQL Client
 
@@ -142,7 +143,9 @@ Read [references/coins-and-balances.md](references/coins-and-balances.md) for co
 
 ## Query Patterns
 
-Object, dynamic field, transaction, system, Move metadata, and name service queries via `client.core` (including execute/simulate/wait patterns and `include` options): read `references/queries.md`.
+Object, dynamic field, transaction, system, Move metadata, name service, and MVR queries via `client.core` (including execute/simulate/wait patterns, pagination, filters, and `include` options): read `references/queries.md`.
+
+For object content, prefer `include: { content: true }` and parse `object.content` with generated BCS types or manual BCS schemas. Use `include: { json: true }` only for transport-specific display/debug data; JSON shape can differ between JSON-RPC, gRPC, and GraphQL. Do not pass `objectBcs` to Move struct parsers — it is the full object envelope and must be parsed with `bcs.Object`.
 
 ## Keypairs and Signing
 
@@ -179,7 +182,13 @@ Supported schemes:
 - `Secp256r1Keypair` from `@mysten/sui/keypairs/secp256r1`
 - `PasskeyKeypair` from `@mysten/sui/keypairs/passkey`
 
+External signers implement the same `Signer` interface but live in separate packages: `@mysten/aws-kms-signer`, `@mysten/gcp-kms-signer`, `@mysten/ledger-signer`, and `@mysten/webcrypto-signer` (or umbrella subpaths under `@mysten/signers`). Use them when private key material must stay outside the process.
+
 Never log mnemonics, bech32 secrets, raw private keys, signatures, JWTs, or zkLogin proofs.
+
+### Verification and zkLogin
+
+Use `verifyPersonalMessageSignature` and `verifyTransactionSignature` from `@mysten/sui/verify`; pass `{ address }` when the expected signer matters. zkLogin verification needs GraphQL for network JWK lookup: Mainnet works with default configuration, but Testnet requires a `SuiGraphQLClient`. Compare zkLogin identities with an expected address or `publicKey.verifyAddress(address)` because both standard and legacy zkLogin address forms can be valid.
 
 ### Sign and Execute
 
@@ -311,13 +320,15 @@ const json = await tx.toJSON({ client: grpcClient });
 const tx = Transaction.from(json);
 ```
 
+`tx.toJSON()` without a client preserves unresolved intents such as `tx.coin()`. Transactions built with a client default to `ValidDuring` expiration for the current epoch + 1. To preserve old no-expiration behavior, set `tx.setExpiration({ None: true })` explicitly. Offline builds must set sender, gas price, gas budget, and gas payment; when there are no owned object inputs or gas coins, use `tx.setGasPayment([])` and set an explicit expiration.
+
 ## Additional References
 
 Read `references/advanced.md` when the task needs any of:
 
 - **Gas** — automatic gas handling and overrides (`setGasPrice`, `setGasBudget`, `setGasPayment`, `tx.gas` caveats).
-- **Offline and sponsored transactions** — offline building with resolved refs, coin-based and address-balance sponsorship, `useGasCoin: false`.
-- **BCS** — serialization, parsing object content, transaction effects.
+- **Offline and sponsored transactions** — offline building with resolved refs, `setGasPayment([])` address-balance gas, coin-based and address-balance sponsorship, `useGasCoin: false`.
+- **BCS** — serialization, `bcs.Object` envelopes, parsing object content, transaction effects V1/V2.
 - **Utils** — constants, formatting, validation, and encoding helpers from `@mysten/sui/utils`.
 - **Faucet** — requesting test SUI with `requestSuiFromFaucetV2`.
 - **zkLogin and multisig** — module pointers and security notes.
@@ -339,6 +350,7 @@ await client.walrus.writeBlob({ ... });
 - New code uses `SuiGrpcClient` or a `ClientWithCoreApi` abstraction.
 - **No `SuiJsonRpcClient` or `@mysten/sui/jsonRpc` imports exist outside the documented kiosk/event-query exception (see the `sui-kiosk-sdk-js` skill). JSON-RPC is deprecated.**
 - **No legacy `SuiClient` from `@mysten/sui/client` (pre-v2) exists.**
+- `Commands` imports have been migrated to `TransactionCommands`; `namedPackagesPlugin` and global plugin registries are not used.
 - Transaction code matches the Move function signature and object ownership model.
 - Balances and MIST amounts use `bigint` or strings, not unsafe `number` math.
 - Transaction results are checked for failure before reporting success.
