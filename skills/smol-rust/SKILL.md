@@ -13,8 +13,8 @@ smol is a **small, fast, modular** async runtime for Rust. The `smol` crate is a
 - **`smol::spawn(future) -> Task<T>`** — spawn onto smol's built-in **global executor**. Worker-thread count comes from the `SMOL_THREADS` env var (**default 1**). You still need a `block_on` somewhere to drive progress on the calling thread.
 - **`Task<T>`** — a spawned task handle. **Dropping a `Task` cancels it.** `.await` it for the result, or call **`.detach()`** to let it run independently. Forgetting this silently cancels work; if the program exits while global tasks are still running, their futures are abandoned and destructors may not run.
 - **`Executor` / `LocalExecutor`** — composable executors when you don't want the global one. `ex.spawn(fut)`, `ex.spawn_many(...)` for large batches, drive with `block_on(ex.run(future))`. `LocalExecutor` runs `!Send` futures on one thread. See the **`smol-macros`** crate for declarative `main!`/`test!` macros and multi-threaded `Executor` setup without proc-macro dependencies.
-- **`Timer`** (`async-io`) — `Timer::after(Duration)`, `Timer::at(Instant)`, `Timer::interval(Duration)`, `Timer::interval_at(Instant, Duration)`, `Timer::never()`, plus `set_after`/`set_at`/`set_interval` reset methods. `.await` a one-shot timer for an `Instant`; poll an interval timer as a stream. Precision is platform-limited (Windows is roughly 16 ms) and timers may sleep longer, never less.
-- **`Async<T>`** — wrap a **pollable** OS I/O handle (networking types and OS FDs such as `TcpStream`, `UnixStream`, timerfd, inotify) to make it async via the reactor. `Async::new` puts the handle in non-blocking mode; `Async::new_nonblocking` assumes you already did. `async-net` provides ready-made `TcpStream`/`TcpListener`/`UdpSocket`/Unix types built on it. Regular files and stdio are **not** safe/pollable here — use `async-fs` (or `Unblock`) for those, not `Async`.
+- **`Timer`** (`async-io`) — `Timer::after(Duration)`, `Timer::at(Instant)`, `Timer::interval(Duration)`, `Timer::interval_at(Instant, Duration)`, `Timer::never()`, plus `set_after`/`set_at`/`set_interval`/`set_interval_at` reset methods and `will_fire()`. `.await` a one-shot timer for an `Instant`; poll an interval timer as a stream. Precision is platform-limited (Windows is roughly 16 ms) and timers may sleep longer, never less.
+- **`Async<T>`** — wrap a **pollable** OS I/O handle (networking types and OS FDs such as `TcpStream`, `UnixStream`, timerfd, inotify) to make it async via the reactor. `Async::new` puts the handle in non-blocking mode; `Async::new_nonblocking` assumes you already did. `async-net` provides ready-made `TcpStream`/`TcpListener`/`UdpSocket`/Unix types built on it. Regular files and stdio are **not** safe/pollable here — use `async-fs` (or `Unblock`) for those, not `Async`. For custom operations prefer `read_with`/`write_with`; `get_mut` and `*_with_mut` are unsafe because the inner I/O source must not be dropped.
 - **`unblock(closure)` / `Unblock<T>`** (`blocking` crate) — run **blocking or CPU-heavy** work on a dedicated thread pool. `Unblock::new(std::io::stdout())` adapts blocking I/O (stdio, `std::fs::File`) into async; `unblock(|| expensive())` offloads a closure.
 - **Re-exported modules:** `smol::io`, `smol::future`, `smol::stream`, `smol::pin`, `smol::ready` (from `futures-lite`); `smol::channel` (mpmc), `smol::lock` (Mutex/RwLock/Semaphore/Barrier/OnceCell), `smol::net`, `smol::fs`, `smol::process` (`smol::process` is omitted on `target_os = "espidf"`).
 - **`use smol::prelude::*;`** — brings in `Future`, `Stream`, and the extension traits (`FutureExt`, `StreamExt`, `AsyncReadExt`, `AsyncWriteExt`, `AsyncBufReadExt`, `AsyncSeekExt`) so `.next()`, `.read_to_end()`, `.race()`, etc. are in scope.
@@ -66,7 +66,7 @@ let body = smol::block_on(Compat::new(async {
 | Footprint / compile | Small deps, fast builds | Larger deps, slower builds |
 | Ecosystem | Smaller; many libs need `async-compat` | De-facto standard (axum, tonic, hyper, sqlx, …) |
 | Entry point | `smol::block_on` (no macro needed) | `#[tokio::main]` / `Runtime` |
-| API style | std-like via `futures-lite`; wrap std types with `Async<T>` | First-party async I/O, `tokio::time`, `tokio::sync`, `tokio::fs` |
+| API style | std-like via `futures-lite`; wrap pollable handles with `Async<T>` | First-party async I/O, `tokio::time`, `tokio::sync`, `tokio::fs` |
 
 **Choose smol when:** you want a lean dependency tree and fast builds, are writing a small binary / CLI / tool, want to compose your own executor, need to mix async with blocking std code cleanly (`Async<T>`/`unblock`), or are writing a **runtime-agnostic library** (depend on `futures-io`/`futures-core` traits, not a full runtime; reach for `async-io` only when intentionally targeting smol-rs).
 
@@ -79,7 +79,7 @@ let body = smol::block_on(Compat::new(async {
 - Drive everything from one `smol::block_on` at the top; use `smol::spawn`/`Executor` for concurrency underneath.
 - Set `SMOL_THREADS` (env) for multi-core throughput with the global executor, or build a multi-threaded `Executor` and run it on N threads (see `smol-macros`).
 - Offload blocking syscalls, `std::fs`, and CPU-bound work with `unblock`/`Unblock` so the reactor thread stays responsive.
-- Wrap arbitrary std I/O types you must use with `Async::new(...)` to integrate them with the reactor instead of blocking.
+- Wrap pollable std networking/OS fd/socket handles with `Async::new(...)` to integrate them with the reactor; for regular files or stdio use `async-fs` or `Unblock` instead.
 - Do not concurrently read from the same `Async<T>` in multiple tasks or concurrently write from multiple tasks; one reader and one writer is fine, but same-direction contention wakes tasks in turn and wastes CPU.
 - After `Async::into_inner()`, explicitly restore blocking mode if you need a blocking handle again. `AsyncWriteExt::close()` flushes; use socket `Shutdown` for TCP/Unix half-close semantics.
 - Hold `async-lock` guards (not `std::sync`) when a lock must survive an `.await`.
@@ -109,7 +109,7 @@ let body = smol::block_on(Compat::new(async {
 | `!Send` tasks | `LocalExecutor` |
 | Delay / interval | `Timer::after(d).await` / `Timer::interval(d)` |
 | Async TCP/UDP/Unix | `smol::net::{TcpStream, TcpListener, UdpSocket}` |
-| Adapt a std I/O type | `smol::Async::new(std_socket)` |
+| Adapt a pollable std socket/FD | `smol::Async::new(std_socket)` |
 | Blocking work | `smol::unblock(|| ...)` / `Unblock::new(...)` |
 | Channel | `smol::channel::bounded(n)` |
 | Async lock across await | `smol::lock::Mutex` |
