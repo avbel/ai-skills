@@ -45,7 +45,7 @@ SETTINGS index_granularity = 8192
 **Strings:** `String` (default), `FixedString(N)` (fixed-width codes/hashes), `LowCardinality(String)` (dictionary-encoded, use when < ~10K distinct values — major compression win).
 **Date/Time:** `Date` (day precision, 2 bytes), `DateTime('UTC')` (second precision, 4 bytes), `DateTime64(3)` (milliseconds). Prefer `DateTime` unless sub-second needed.
 **Enum:** `Enum8('a'=1, 'b'=2)` — fixed categorical values.
-**Special:** `UUID`, `IPv4`, `IPv6`, `Array(T)`, `Tuple(T1,T2)`, `Map(K,V)`, `Nested(...)`.
+**Special:** `UUID`, `IPv4`, `IPv6`, `JSON`, `Dynamic`, `Variant(...)`, `Time`, `Time64`, `Array(T)`, `Tuple(T1,T2)`, `Map(K,V)`, `Nested(...)`, geo (`Point`, `Ring`, `Polygon`, `MultiPolygon`).
 **Nullable(T):** Adds overhead (separate bitmap) — avoid unless truly needed. Use defaults (0, `''`) instead.
 
 ## ORDER BY / Primary Key Design
@@ -209,9 +209,11 @@ await client.command({
 - Use `format` option, not `FORMAT` clause in SQL.
 - `await client.close()` on shutdown.
 - Node compression: `true` means gzip; `{ codec: 'br' }` enables Brotli; `{ codec: 'zstd' }` requires Node `>=22.15.0`. `@clickhouse/client-web` rejects zstd and does not support streaming inserts.
+- JS client type mapping: `UInt64/128/256` and `Int64/128/256` come back as strings in JSON formats by default; keep large decimals as strings on insert and cast `Decimal*` to `String` when querying exact values.
+- Date caveats: insert `Date`/`Date32` as `'YYYY-MM-DD'` strings; `DateTime`/`DateTime64` may use JS `Date` with `date_time_input_format: 'best_effort'`.
 - Do not import from deprecated `@clickhouse/client-common`; import public types from `@clickhouse/client` or `@clickhouse/client-web`. Use `ClickHouseSettingsInterface` for settings helpers shared across Node/Web clients.
 - `parseColumnType` is deprecated; use `@clickhouse/datatype-parser` (`parseDataType`) for ClickHouse type-string AST parsing.
-- For RowBinary hot paths, prefer `@clickhouse/rowbinary`; the client package also ships RowBinary agent skills under `node_modules/@clickhouse/client/skills/`.
+- For RowBinary hot paths, prefer `@clickhouse/rowbinary` reader/writer (`@clickhouse/rowbinary/writer` for inserts); the client package also ships RowBinary agent skills under `node_modules/@clickhouse/client/skills/`.
 - Pass a raw OpenTelemetry tracer via `tracer` when you need spans; the client has no OTel dependency and tracer exceptions are not swallowed.
 - For browser/edge: use `@clickhouse/client-web` (same API, no streaming inserts).
 
