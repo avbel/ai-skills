@@ -9,24 +9,25 @@ Use these conventions for the Sui command line tools published by Mysten Labs.
 
 ## Source Baseline
 
-- Authoritative reference: <https://docs.sui.io/references/cli> and the per-command pages it links (`/references/cli/client`, `/client/ptb`, `/keytool`, `/move`, `/replay`, `/validator`, `/external-signers`, `/trace-analysis`).
-- Verify a local install before using examples: `sui --version`. Manage versions with `suiup` (<https://github.com/MystenLabs/suiup>) rather than ad-hoc binary swaps.
-- Enable the `tracing` feature when building the CLI from source if you need Move test coverage or the Move debugger; without it `sui move coverage` and trace-based debugging are unavailable.
+- Authoritative reference: <https://docs.sui.io/references/cli> and the per-command pages it links (`/references/cli/client`, `/client/ptb`, `/completion`, `/keytool`, `/external-signers`, `/move`, `/replay`, `/trace-analysis`, `/validator`).
+- Verify a local install before using examples: `sui --version`. Manage versions with `suiup` (<https://github.com/MystenLabs/suiup>) rather than ad-hoc binary swaps; pin the intended network release explicitly, for example `suiup install sui@testnet`.
+- For Move coverage, test traces, or debugger/profiler traces, use a CLI with tracing/debug support (`suiup install sui@testnet --debug` for release builds managed by `suiup`, or enable the `tracing` feature when building from source).
 - Append `--json` to most commands to get machine-readable output (useful for scripts and large result sets).
 
 ## Command Groups
 
-The Sui CLI is grouped by feature; the seven groups documented upstream are:
+The Sui CLI is grouped by feature. Common documented groups are:
 
 - `sui client` — interact with a Sui network (addresses, envs, coins, objects, Move calls, publish/upgrade).
 - `sui client ptb` — build and execute Programmable Transaction Blocks directly from the shell.
-- `sui external-keys` — drive external signers (Ledger, YubiKey, AWS KMS) via the rust-signers integration; introduced in CLI 1.66.2.
+- `sui completion` — generate shell completion scripts (`bash`, `zsh`, `fish`, `powershell`, `elvish`).
+- `sui external-keys` — manage Ledger/YubiKey external signer keys via the rust-signers integration; introduced in CLI 1.66.2.
 - `sui keytool` — cryptographic utilities: generate/import/export keys, sign data, manage MultiSig, work with zkLogin.
-- `sui move` — work with Move source: `new`, `build`, `test`, `coverage`, `migrate`, `summary`, `update-deps`, `disassemble`.
+- `sui move` — work with Move source: `new`, `build`, `test`, `coverage`, `format`, `migrate`, `summary`, `update-deps`, `disassemble`.
 - `sui replay` — replay an on-chain transaction locally and optionally produce a trace for the debugger/profiler.
 - `sui validator` — validator-only operations (candidacy, committee, gas price, metadata, bridge committee).
 
-Use `sui <group> --help` for the authoritative subcommand list — the CLI evolves faster than reference pages.
+Other top-level tools can appear before docs are expanded (`sui start`, `network`, `genesis`, `genesis-ceremony`, `bridge-committee-init`, `fire-drill`, `analyze-trace`). Use `sui <group> --help` for the authoritative subcommand list — the CLI evolves faster than reference pages.
 
 ## Environments and Addresses
 
@@ -112,7 +113,10 @@ sui client ptb \
 - `gas` refers to the gas coin and may only be moved by value via `transfer-objects`.
 - Name resolution shortcuts work for common packages: `sui`, `std`, `deepbook` resolve to `0x2`, `0x1`, `0xdee9`.
 - Reserved words you cannot use as variable names: `address`, `bool`, `vector`, `some`, `none`, `gas`, `u8`, `u16`, `u32`, `u64`, `u128`, `u256`.
-- Use `--preview` to dump the planned transaction list without executing, and `--dry-run` to simulate execution and see effects/gas without paying.
+- Use `--preview` to dump the planned transaction list, `--dry-run` to simulate execution and see effects/gas without paying, and `--dev-inspect` for dev-inspect.
+- Use `--tx-digest`, `--serialize-unsigned-transaction`, or `--serialize-signed-transaction` for offline/remote signing and execution workflows.
+- Use `--gas-coin`, `--gas-price`, `--gas-sponsor`, and `--sender` when the default active address/gas selection is not the intended signer or payer.
+- Use `--warn-shadows` when generating larger PTBs in scripts; variable shadow warnings are off by default.
 - Use `--summary` for a compact result instead of the full effects table.
 
 ### Shell Quoting Gotchas
@@ -147,13 +151,15 @@ sui client verify-source                              # diff local package vs on
 
 - The PTB form is the correct shape when the deploy must do more than publish (e.g. publish then call init, or burn the `UpgradeCap` with `package::make_immutable`).
 - `test-publish` is the right form for throwaway publishes on localnet/devnet: the `--build-env` name controls dependency resolution, and the resulting addresses land in `Pub.<env>.toml` (defaulting to the active CLI environment's name) so `Published.toml` stays clean for real releases.
-- Set `--gas-budget` explicitly on older CLI versions; recent versions infer a budget when omitted.
+- `publish`, `test-publish`, and `upgrade` support the same transaction-processing flags as other client transactions: `--dry-run`, `--dev-inspect`, `--tx-digest`, `--serialize-unsigned-transaction`, `--serialize-signed-transaction`, `--sender`, `--gas-price`, `--gas-sponsor`, and `--forking-mode` for local forked-network testing.
+- Set `--gas-budget` explicitly on older CLI versions; recent versions infer a budget with an extra dry run when omitted.
 - `verify-bytecode-meter` returns module/function metering numbers — use it before pushing big modules to mainnet.
 
 ## sui keytool
 
 ```sh
 sui keytool list                                      # list keys in sui.keystore
+sui keytool update-alias <OLD> <NEW>                  # rename a keystore alias
 sui keytool generate ed25519                          # generate ed25519 keypair file
 sui keytool import "<mnemonic-or-suiprivkey...>" ed25519
 sui keytool export --key-identity <alias-or-address>  # exports suiprivkey... Bech32 string
@@ -167,7 +173,8 @@ sui keytool zk-login-sign-and-execute-tx ...          # zkLogin signing workflow
 
 - Key scheme flags: `ed25519`, `secp256k1`, `secp256r1`. Default derivation paths are `m/44'/784'/0'/0'/0'` (ed25519), `m/54'/784'/0'/0/0` (secp256k1), `m/74'/784'/0'/0/0` (secp256r1).
 - Hex-encoded private keys are deprecated; use Bech32 `suiprivkey...` strings for import/export. `sui keytool convert` upgrades legacy hex/base64 keys.
-- For production signing, prefer hardware backed signers via `sui external-keys` (Ledger, YubiKey) or `sui keytool sign-kms` (AWS KMS) over keystore files.
+- `load-keypair` and `unpack` bridge validator/keypair file formats; keep their output out of logs because it can include private key material.
+- For production signing, prefer hardware backed signers via `sui external-keys` (Ledger, YubiKey) or `sui keytool sign-kms` (AWS KMS) over local hot keystore files.
 - `--keystore-path` overrides the default `~/.sui/sui_config/sui.keystore` location, useful in CI.
 
 ## sui move
@@ -177,11 +184,17 @@ sui move new <name>                                   # scaffold Move.toml + sou
 sui move build                                        # compile
 sui move build --lint                                 # extra linters
 sui move build --warnings-are-errors                  # CI-strict build
+sui move build --dump-bytecode-as-base64              # JSON bytecode/deps for tooling
+sui move build --dump-bytecode-as-base64 --no-tree-shaking  # offline output, no RPC pruning
+sui move build --generate-struct-layouts              # layouts for SDK argument/event BCS
 sui move test                                         # run unit tests
 sui move test --coverage                              # collect coverage (needs tracing feature)
+sui move test --trace function-only                   # emit test execution traces
 sui move coverage summary --test                      # summarize after a --coverage run
+sui move coverage lcov --test                         # LCOV after tests with --trace
 sui move coverage source --module <name>              # per-module source coverage
 sui move disassemble <module>                         # inspect compiled bytecode
+sui move format                                       # format Move files with prettier-move
 sui move migrate                                      # auto-migrate package to Move 2024
 sui move summary                                      # serialized package summary
 sui move update-deps                                  # re-pin Move.toml dependencies
@@ -190,20 +203,38 @@ sui move update-deps                                  # re-pin Move.toml depende
 - Run `sui move` commands from a directory containing `Move.toml`, or pass `-p <path>`.
 - `--default-move-edition 2024.beta` / `--default-move-flavor sui` set defaults only when the package does not specify them.
 - `--no-lint` disables the standard lint passes; `--lint` opts into extra ones.
-- Coverage and the Move debugger require a CLI built with the `tracing` feature.
+- Coverage, `sui move test --trace`, replay traces, and debugger workflows require a CLI built with tracing/debug support. With `suiup`, install a debug binary and make it default when needed: `suiup install sui@testnet --debug` then `suiup default set sui@testnet-<version> --debug`.
 
 ## sui replay
 
 ```sh
 sui replay --digest <TX-DIGEST>                       # replay locally, compare to chain
+sui replay --digests-path digests.txt                 # batch replay one digest per line
+sui replay --digests-path digests.txt --terminate-early
 sui replay --digest <TX-DIGEST> --overwrite           # re-replay into existing dir
 sui replay --digest <TX-DIGEST> --trace               # emit Move debugger / profiler trace
+sui replay --digest <TX-DIGEST> --node mainnet        # override active wallet env
 sui replay --digest <TX-DIGEST> --output-dir <path>   # custom output location
 ```
 
 - Output defaults to `./.replay/<digest>/`. The directory is not overwritten on subsequent runs without `--overwrite`.
+- `--node` accepts `mainnet`, `testnet`, or a full GraphQL URL; use it in scripts instead of relying on the active wallet env.
 - The legacy `sui client replay-transaction|replay-batch|replay-checkpoint` commands are deprecated; use `sui replay` instead.
 - Combine with `sui analyze-trace -p <trace> gas-profile` and `speedscope` to inspect gas usage per Move call.
+
+## Local Networks
+
+```sh
+sui genesis -f --with-faucet                          # create/overwrite local genesis config
+sui start                                             # start from existing genesis, persist state
+sui start --force-regenesis --with-faucet             # throwaway local network + faucet
+sui start --with-graphql                              # also starts indexer + consistent store
+sui start --with-indexer=<POSTGRES_URL>               # explicit Postgres-backed indexer
+```
+
+- `sui start` defaults the fullnode RPC port to `9000`; the faucet defaults to `0.0.0.0:9123`, consistent store to `9124`, and GraphQL to `9125`.
+- `--force-regenesis` discards local state between runs. Omit it when you need persisted local objects/packages.
+- GraphQL requires an indexer and consistent store; `--with-graphql` enables both if they are not already set. Indexer mode requires PostgreSQL unless using the CLI-managed temporary database mode.
 
 ## sui validator
 
@@ -227,8 +258,9 @@ sui validator update-bridge-committee-node-url ...
 
 ## External Signers (Ledger / YubiKey / KMS)
 
-- Available from CLI 1.66.2 onwards. The CLI talks to signer binaries (`ledger-signer`, `yubikey-signer`, `aws-signer`) over a JSON-RPC pipe on stdin/stdout — see <https://github.com/MystenLabs/rust-signers>.
-- Use `sui external-keys --help` to enumerate add/list/use subcommands available on your installed version; signer support and flags evolve quickly.
+- Available from CLI 1.66.2 onwards. `sui external-keys` manages signer binaries such as `ledger-signer` and `yubikey-signer` over a JSON-RPC pipe on stdin/stdout — see <https://github.com/MystenLabs/rust-signers>.
+- Install signer binaries with `suiup install ledger-signer` or `suiup install yubikey-signer`, then use `sui external-keys list-keys <SIGNER_BINARY>`, `add-existing <KEY_ID> <SIGNER_BINARY>`, or `generate <SIGNER_BINARY>`.
+- AWS KMS signing is exposed through `sui keytool sign-kms`, not `sui external-keys` on current CLI help.
 - Prefer external signers over `sui.keystore` for any address holding non-trivial funds or used for package upgrades.
 
 ## Common Operations Cheat Sheet
