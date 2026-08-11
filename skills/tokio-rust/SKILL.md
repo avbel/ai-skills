@@ -9,10 +9,10 @@ Apply these conventions when working with Tokio in Rust projects.
 
 ## Version / Compatibility
 
-- Latest checked: Tokio `1.52.3` (2026-05-08), MSRV `1.71` from README/crates.io metadata.
+- Latest checked: Tokio `1.53.1` (2026-07-20), MSRV `1.71` from README/crates.io metadata.
 - Tokio `1.x` is stable, but MSRV may increase in minor releases. Use `tokio = "1"` for apps unless you intentionally pin.
 - If pinning a fixed minor, prefer an LTS line (`1.51.x` through March 2027; `1.47.x` through September 2026).
-- Unstable features (`tracing`, `io-uring`, `taskdump`) require both a Cargo feature and `--cfg tokio_unstable`; APIs may break in `1.x`.
+- Unstable features (`tracing`, `schedule-latency`, `io-uring`, `taskdump`) require both a Cargo feature and `--cfg tokio_unstable`; APIs may break in `1.x`.
 
 ## Patterns ✅
 
@@ -65,7 +65,7 @@ Apply these conventions when working with Tokio in Rust projects.
 | `tokio::process` | `process` | Async child process management (`Command`, `Child`, `ChildStdin`/`Out`/`Err`). |
 | `tokio::runtime` | `rt` | `Runtime`, `LocalRuntime`, `Handle`, `block_on`. Use `new_multi_thread()` or `new_current_thread()`; use `LocalRuntime` for `!Send` tasks without `LocalSet`. |
 
-**Unstable diagnostics:** `runtime::dump`/task dumps require `taskdump` + `tokio_unstable` and are Linux-only. Tokio's `tracing` feature emits internal runtime traces; it is not a `tokio::tracing` module.
+**Unstable diagnostics:** `runtime::dump`/task dumps require `taskdump` + `tokio_unstable` and are Linux-only. `schedule-latency` enables task scheduling latency metrics. Tokio's `tracing` feature emits internal runtime traces; it is not a `tokio::tracing` module.
 
 **Companion crates:**
 
@@ -121,8 +121,8 @@ tokio = { version = "1", features = ["full"] }
 # Minimal practical set for network services. Add io-util, time, signal, fs as needed.
 # Use "full" while prototyping, then trim before release.
 # Note: io-std needed for stdin/stdout/stderr; process for async subprocesses.
-# Latest checked Tokio: 1.52.3; MSRV: Rust 1.71.
-# Unstable features (tracing/io-uring/taskdump) also need --cfg tokio_unstable.
+# Latest checked Tokio: 1.53.1; MSRV: Rust 1.71.
+# Unstable features (tracing/schedule-latency/io-uring/taskdump) also need --cfg tokio_unstable.
 
 # Streams
 tokio-stream = "0.1"
