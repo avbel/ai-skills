@@ -29,6 +29,7 @@ Apply these conventions when working with postgres.js (`postgres` package from `
 ## TypeScript
 - Use generic type parameters for results: `` sql<User[]>`select * from users` ``.
 - Destructure with optionals for single-row queries: `` const [user]: [User?] = await sql`select * from users where id = ${id}` ``.
+- Avoid `postgres@3.4.8` in TypeScript projects using transactions — it regressed `TransactionSql` call signatures (`TS2349` inside `sql.begin`). Use `3.4.9` or newer.
 
 ## Dynamic Queries
 - **Column selection:** `` sql`select ${sql(columns)} from users` ``.
@@ -155,7 +156,7 @@ Apply these conventions when working with postgres.js (`postgres` package from `
 - `await sql.end()` — reject new queries, wait for in-flight queries to complete.
 - `await sql.end({ timeout: 5 })` — force close after 5 seconds.
 - `const reserved = await sql.reserve()` — reserve a dedicated connection. Call `reserved.release()` when done.
-- Cloudflare Workers/Pages: postgres.js exposes a `workerd` export and supports Workers TCP sockets; prefer Cloudflare Hyperdrive for connection pooling/query caching.
+- Cloudflare Workers/Pages: postgres.js exposes a `workerd` export and supports Workers TCP sockets; prefer Cloudflare Hyperdrive for connection pooling/query caching. The old `worker` export was removed in 3.4.5 — do not import it.
 
 ## SSL/TLS
 - Basic: `ssl: true`.
