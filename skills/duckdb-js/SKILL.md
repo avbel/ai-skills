@@ -253,13 +253,15 @@ FROM monthly UNPIVOT (amount FOR month IN (COLUMNS(* EXCLUDE (id))));
 
 ## Node.js Client (`@duckdb/node-api`)
 
-Current stable package: `@duckdb/node-api` `1.5.4-r.1` (DuckDB 1.5.4 line; wraps released DuckDB binaries via `@duckdb/node-bindings`). Official docs list Linux glibc/musl (x64/arm64), macOS (x64/arm64), and Windows x64 as supported; do not rely on Windows ARM64 despite the optional npm binary package existing.
+Current stable package: `@duckdb/node-api` `1.5.5-r.4` (DuckDB 1.5.5 line; wraps released DuckDB binaries via `@duckdb/node-bindings`). Official docs list Linux glibc/musl (x64/arm64), macOS (x64/arm64), and Windows (x64/arm64) as supported.
 
 ```typescript
-import { DuckDBInstance } from '@duckdb/node-api'
+import duckdb, { DuckDBInstance } from '@duckdb/node-api'
+
+console.log(duckdb.version())
 
 const db = await DuckDBInstance.create()          // in-memory
-// const db = await DuckDBInstance.create('my.duckdb')  // persistent
+// const db = await DuckDBInstance.create('my.duckdb', { threads: '4' }) // persistent + config
 // const db = await DuckDBInstance.fromCache('my.duckdb') // reuse per-process instance
 const conn = await db.connect()
 
@@ -275,7 +277,7 @@ await conn.run(`COPY (SELECT * FROM 'input.csv') TO 'output.parquet'
   (FORMAT parquet, COMPRESSION zstd)`)
 
 // Streaming large results
-const reader = await conn.streamAndReadAll(sql)
+const streamed = await conn.streamAndReadUntil(sql, 10_000)
 
 // Parameterized SQL; values/types can be arrays or named objects
 const filtered = await conn.runAndReadAll(
@@ -294,9 +296,10 @@ Operational patterns:
 - Use `DuckDBInstance.fromCache(path)` when multiple modules in the same Node process may open the same database file; multiple independent instances must not attach the same database.
 - Prefer `runAndReadAll()` for bounded results; use `streamAndReadUntil()` / `streamAndRead()` or async chunk iteration for large results.
 - For cooperative libuv behavior on long queries, prefer `startStreamThenRead*()` helpers; they combine pending results with streaming so work is split into short tasks without fully materializing the result.
-- MAP and UNION support is still incomplete for binding/appending; construct those values in SQL or verify the current API before using appender/prepared-statement paths.
-- User-defined types/functions, profiling info, table description, and Arrow APIs are still on the Node Neo roadmap; do not design wrappers assuming those APIs exist.
+- Bind complex values with the API constructors (`listValue`, `structValue`, `mapValue`, `unionValue`, `decimalValue`, timestamp/date helpers) or let simple parameter types infer; pass explicit DuckDB types when inference is ambiguous.
+- Scalar and table function registration are available; table function callbacks run on the JS thread, so they are serialized even when DuckDB scans in parallel.
 - Use `getRowsJson()` / `getRowObjectsJson()` when serializing results: BIGINT, DECIMAL, timestamps, INTERVAL, and nested types are converted losslessly for JSON.
+- `TIMESTAMPTZ` string conversion uses `DuckDBTimestampTZValue.timezoneOffsetInMinutes`, which is distinct from DuckDB's `TimeZone` setting; set it explicitly in deterministic services/tests.
 - Explicitly close long-lived resources (`connection.closeSync()` / `disconnectSync()`, `instance.closeSync()`) in daemons and tests instead of relying only on GC.
 
 ## Key Settings
