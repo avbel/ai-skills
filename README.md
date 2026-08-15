@@ -158,7 +158,8 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | Skill | Covers |
 |-------|--------|
 | `js-conventions` | Node.js 24+, pnpm, ESM, ES2024, async/await, type safety |
-| `typescript-6` | TS 6.0 new defaults, `Temporal`, upsert, subpath imports |
+| `typescript-6` | Existing TS 6 projects, pinned API, TS 7 blockers |
+| `typescript-7` | Native compiler, new projects, TypeScript 6 migration |
 | `nodejs-26` | Temporal, V8 14.6, Undici 8, ffi, removals |
 | `node-rust-addon` | Rust-backed Node native addons, FFI, async |
 | `design-patterns-ts` | GoF patterns with idiomatic TypeScript |

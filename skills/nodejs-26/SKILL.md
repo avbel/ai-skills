@@ -7,6 +7,8 @@ description: Node.js 26 (May 2026) runtime conventions — Temporal API enabled 
 
 Apply these conventions when targeting Node.js 26.x (Current line, LTS in October 2026). V8 14.6 / Chromium 146 baseline, `NODE_MODULE_VERSION = 147`.
 
+For TypeScript projects, use [TypeScript 7](../typescript-7/SKILL.md). It is the default compiler for new Node.js 26 projects and documents compatibility constraints for API-dependent tooling.
+
 ## Runtime Baseline
 - V8 14.6.202.33 (from Chromium 146). All V8 14.x ECMAScript additions are available without flags.
 - Undici 8.0.2 powers `fetch`, `Request`, `Response`, `Headers`, `WebSocket`.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "TypeScript 7"
+  short_description: "Build and port projects with TypeScript 7"
+  default_prompt: "Use $typescript-7 to configure or port this project to TypeScript 7."
