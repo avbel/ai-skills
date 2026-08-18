@@ -180,7 +180,8 @@ Cross-language workflow skills sharing one philosophy: cheapest sufficient proce
 | Skill | Covers |
 |-------|--------|
 | `dev-cycle` | Router and shared philosophy for the dev-* skill set |
-| `dev-feature` | Fast path for small features: clarify, plan, implement |
+| `dev-feature-lite` | Minimal path for obvious changes: implement, verify, report |
+| `dev-feature` | Coordinated features: clarify, in-chat plan, implement |
 | `dev-problem-solving` | Brainstorm approaches, decide, solution doc, reviewed build plan |
 | `dev-review` | Orchestrated review: spec audit, security pass, edge cases, second opinion |
 | `dev-testing` | Integration tests first, in-memory DBs, verified API mocks |

@@ -1,11 +1,13 @@
 ---
 name: dev-feature
-description: Fast path for small features and changes — clarify only real ambiguities, show a compact plan, implement immediately. No design docs, no ceremony. Use when the user asks to "add", "implement", "change", or "fix" something scoped to hours not days; e.g. "add an endpoint", "add a flag", "support X in Y".
+description: Scoped workflow for coordinated features and changes — clarify real ambiguities, show a compact in-chat plan, implement immediately. Use when a change is larger than a localized dev-feature-lite edit but still has one clear architecture, such as an endpoint spanning API, storage, and tests.
 ---
 
-# Small Feature — Fast Path
+# Coordinated Feature — Fast Path
 
-For changes scoped to hours: one plan message, then code. The enemy is ceremony — no design docs, no multi-phase process, no summary documents afterwards. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
+For coordinated changes scoped to hours: one in-chat plan, then code. The enemy is ceremony — no design docs, no multi-phase process, no summary documents afterwards. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
+
+**Downgrade instead** to `dev-feature-lite` when the behavior and implementation path are obvious and the change can proceed without a plan or user decision.
 
 **Escalate instead** when the task smells bigger: unknown root cause → `dev-debug`; multiple viable architectures or "how should we..." → `dev-problem-solving`. Say you're escalating and why, in one line.
 
@@ -21,7 +23,7 @@ Attach a recommended answer to each question so the user can approve with one wo
 
 Do **not** ask about things you can resolve yourself: facts findable in the codebase (grep, don't ask), existing conventions (read the code), defaults with an obvious answer (state your assumption in the plan instead), or preferences that don't change the diff. If nothing is ambiguous, skip this step entirely.
 
-## Step 2 — Plan (one short message, then go)
+## Step 2 — Plan (one short in-chat message, then go)
 
 Check the project knowledge base first if one exists (`docs/knowledge/` — see `dev-knowledge`): a past lesson may already cover the exact pitfall.
 
@@ -36,6 +38,8 @@ Assumptions: <anything you decided instead of asking>
 ```
 
 Keep it under ~10 lines. No alternatives-considered section, no risk matrix — that's `dev-problem-solving` territory.
+
+Keep this plan in the conversation. Create a plan or solution Markdown file only when the user explicitly asks for one.
 
 ## Step 3 — Implement, KISS
 
