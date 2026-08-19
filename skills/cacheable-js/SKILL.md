@@ -71,8 +71,8 @@ await cache.setMany([{ key: 'a', value: 1 }, { key: 'b', value: 2, ttl: '5m' }])
 
 const val = await cache.get<string>('key')       // T | undefined
 const vals = await cache.getMany<number>(['a', 'b'])
-const raw = await cache.get<string>('key', { raw: true })    // raw metadata
-const rawMany = await cache.getMany<number>(['a', 'b'], { raw: true })
+const raw = await cache.getRaw<string>('key')    // raw metadata
+const rawMany = await cache.getManyRaw<number>(['a', 'b'])
 
 const exists = await cache.has('key')
 const manyExist = await cache.hasMany(['a', 'b'])
@@ -85,7 +85,7 @@ await cache.clear()
 await cache.disconnect()
 ```
 
-In current `cacheable`, use `get(key, { raw: true })` / `getMany(keys, { raw: true })` for raw metadata. `CacheableMemory` still exposes `getRaw()` / `getManyRaw()` directly.
+In current npm `cacheable`, use `getRaw()` / `getManyRaw()` for raw metadata. Do not copy stale docs that show `get(key, { raw: true })` / `getMany(keys, { raw: true })`; the published 2.5.0 types expose only `GetOptions` with `nonBlocking` for `get` / `getMany`.
 
 ## L1/L2 Behavior
 
@@ -219,9 +219,10 @@ mem.keys
 
 const keyv = new Keyv({ store: new KeyvCacheableMemory({ ttl: 60000, lruSize: 5000 }) })
 const cachedFn = mem.wrap((n: number) => n * 2, { ttl: '1h', key: 'double' })
+const cachedValue = mem.getOrSet('derived:key', () => computeValueSync(), { ttl: '1h' })
 ```
 
-For large objects, consider `useClones: false` only if callers will not mutate cached values. `CacheableMemory` hooks are synchronous: `async` hook handlers are skipped, not awaited.
+For large objects, consider `useClones: false` only if callers will not mutate cached values. `CacheableMemory.getOrSet()` is synchronous; use `Cacheable.getOrSet()` for async cache-aside loaders and stampede protection. `CacheableMemory` hooks are synchronous: `async` hook handlers are skipped, not awaited.
 
 ### CacheableMemory Hooks
 
@@ -308,4 +309,5 @@ Sync updates only the primary storage layer of peer instances. Secondary storage
 - Use explicit namespaces for shared stores and distributed sync.
 - `tags: true` must be enabled on every process sharing the tagged store; disabled readers ignore tag freshness.
 - Default `cacheable` primary is `@cacheable/memory` via `createKeyv()` and does not expose Keyv `iterator()`; walk the underlying `CacheableMemory.items` or use an iterable `new Keyv()` primary when iteration is required.
+- Changing `CacheableMemory.storeHashSize` recreates its backing stores and clears entries; choose it at construction.
 - `Cacheable.getStaticInstance()` is process-global and long-lived; `clear()` / `disconnect()` affects all callers, and CJS/ESM builds each get their own singleton.
