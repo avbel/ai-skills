@@ -45,7 +45,7 @@ CommonJS:
 const closeWithGrace = require('close-with-grace');
 ```
 
-The package includes TypeScript types.
+The package is CommonJS (`type: commonjs`, `main: index.js`) and ships `./index.d.ts` TypeScript declarations. The upstream README documents both ESM default import and CommonJS `require()` usage.
 
 ## Basic Pattern
 
@@ -90,7 +90,7 @@ closeWithGrace(async ({ signal, err, manual }) => {
 });
 ```
 
-If the handler resolves, the process exits with code `0`. If it rejects or calls the callback with an error, the process exits with code `1`.
+If the handler resolves after a normal signal, manual `close()`, or `beforeExit`, the process exits with code `0`. If shutdown was triggered by `uncaughtException` or `unhandledRejection`, if the handler rejects, or if the callback receives an error, the process exits with code `1`.
 
 ## Fastify
 
@@ -148,7 +148,7 @@ closeWithGrace(
 );
 ```
 
-`skip`: event names that should not trigger the close callback. Use only when another part of the app owns those events:
+`skip`: signal, error, or exit-event names that should not trigger the close callback. Use only when another part of the app owns those events:
 
 ```js
 closeWithGrace(
