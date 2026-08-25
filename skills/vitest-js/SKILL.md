@@ -10,9 +10,10 @@ Use these conventions for testing JavaScript/TypeScript projects with `vitest-de
 ## Source Baseline
 
 - Prefer official docs at `vitest.dev` and the matching GitHub release over older Jest-era snippets.
-- Current stable baseline checked for this skill: Vitest `4.1.10` (July 2026). Vitest `5.0.0-beta.7` exists but is not the stable `latest` tag.
-- Vitest 4.1.10 supports **Vite `^6.0.0 || ^7.0.0 || ^8.0.0`** and **Node.js `^20.0.0 || ^22.0.0 || >=24.0.0`**.
+- Current stable baseline checked for this skill: Vitest `4.1.11` (August 2026). Vitest `5.0.0-rc.2` exists but is not the stable `latest` tag.
+- Vitest 4.1.11 supports **Vite `^6.0.0 || ^7.0.0 || ^8.0.0`** and **Node.js `^20.0.0 || ^22.0.0 || >=24.0.0`**.
 - Treat `main` branch README/package metadata as prerelease when it disagrees with `latest`; use npm `dist-tags.latest` plus the versioned docs for stable support floors.
+- Vitest 4.1.11 tightens mocker redirect handling to the filesystem allowlist; do not rely on redirect-based mocks outside the configured allowlist.
 - Vitest is Vite-native: it reuses the project's Vite config, transforms, and resolvers — do not bolt Babel on top unless a transform is missing.
 - Vitest's `vi` API is Jest-compatible enough that most `jest.*` calls map 1:1 to `vi.*`, but the runtime, ESM handling, and mocking semantics differ — do not assume Jest behavior.
 
