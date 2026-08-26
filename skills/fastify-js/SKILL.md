@@ -9,9 +9,12 @@ Apply these conventions when working with Fastify code in node.js projects.
 
 ## Server Setup
 - Fastify 5 targets Node.js 20+. Do not write guidance that assumes Node 18 compatibility for new Fastify 5 apps.
+- Current Fastify 5 stable is 5.12.1; keep production apps on at least 5.12.1 for the August 2026 security fixes.
 - Create the Fastify instance with explicit options: `logger: true` (or Pino config object), `loggerInstance` for an existing Pino-compatible logger, `trustProxy` when behind a reverse proxy.
 - Set `requestTimeout` when exposed without a reverse proxy; use `handlerTimeout` for application-level route lifecycle timeouts and pass `request.signal` into cancellable work.
+- For custom request-log behavior or request-id log labels, prefer `logController: new LogController(...)`; top-level `disableRequestLogging` and `requestIdLogLabel` are deprecated for removal in Fastify 6.
 - Do not rely on semicolon query delimiters; Fastify 5 defaults `routerOptions.useSemicolonDelimiter` to `false`. Enable it only for legacy clients that send `/path;foo=bar`.
+- Treat forwarded `request.ip` / `request.host` / `request.protocol` as untrusted unless `trustProxy` is restricted to the real proxy chain; avoid hop-count-only custom trust functions.
 - Separate app construction (`app.ts`) from server startup (`server.ts` / `cluster.ts`) to enable testing via `inject()` without starting the server.
 
 ## Plugins & Encapsulation
@@ -23,6 +26,7 @@ Apply these conventions when working with Fastify code in node.js projects.
 
 ## Routes
 - Use shorthand methods: `fastify.get()`, `fastify.post()`, etc.
+- Fastify 5.11+ supports `QUERY` by default. Use `addHttpMethod()` only for custom/non-default methods or intentional body-behavior overrides; pass `overrideExisting: true` when overriding an existing method.
 - Always use `async` handlers that `return` the response body. Do not mix `return` with `reply.send()` — pick one.
 - If an async handler or hook must call `reply.send()` later/outside the promise chain, `return reply` or `await reply` to avoid duplicate execution/race conditions.
 - Group related routes in a plugin and apply a `prefix` via `register` options.
@@ -30,6 +34,7 @@ Apply these conventions when working with Fastify code in node.js projects.
 - Use route-level `schema` for request validation (`body`, `querystring`, `params`, `headers`) and response serialization (`response`).
 - Prefer route-level `handlerTimeout` for slow endpoints instead of only socket timeouts; timeout errors use code `FST_ERR_HANDLER_TIMEOUT` and async work must observe `request.signal` to stop cooperatively.
 - Treat `request.params` as a null-prototype object in Fastify 5; use `Object.hasOwn(request.params, 'id')`, not `request.params.hasOwnProperty(...)`.
+- Treat route params and wildcards as percent-decoded untrusted input. Do not join them into filesystem paths, template names, or redirects without validation and containment; use `@fastify/static` for rooted file serving.
 
 ## Validation & Serialization
 - Define full JSON Schema (Draft 7) on every route for `body`, `querystring`, `params`, and `response`, including root `type` and `properties`; v5 removed JSON schema shorthand.
@@ -63,6 +68,7 @@ Apply these conventions when working with Fastify code in node.js projects.
 - Set a custom error handler with `fastify.setErrorHandler(async (error, request, reply) => { ... })`.
 - Error handlers are encapsulated — each plugin can define its own. Errors bubble to the nearest ancestor handler.
 - Avoid calling `setErrorHandler` multiple times in the same scope; Fastify 5 warns that `allowErrorHandlerOverride` defaults to `true` now but will default to `false` in the next major release.
+- The default error handler sends `error.message` and `error.code` to clients, including 500s. Register a root error handler that logs unexpected errors and returns sanitized 5xx payloads.
 - Always throw `Error` instances, never primitives. Fastify's built-in errors use `FST_` prefixed codes (e.g., `FST_ERR_VALIDATION`).
 - Validation errors have `error.validation` (raw errors) and `error.validationContext` (`body`, `params`, `query`, `headers`).
 - If a custom error handler throws, the parent error handler catches it (triggered only once to prevent loops).
@@ -75,6 +81,6 @@ Apply these conventions when working with Fastify code in node.js projects.
 ## Performance
 - Define `response` schemas on all routes for serialization speed.
 - Set appropriate `bodyLimit` per route for large/small payloads instead of raising the global limit.
-- Use `disableRequestLogging: true` or a predicate function for high-throughput/noisy routes where request logs are not needed.
+- Use `LogController` with `disableRequestLogging` / `isLogDisabled` for high-throughput or noisy routes where request logs are not needed.
 - Use route/plugin `logLevel` for noisy or high-value endpoints; it applies to route logging, not the global `fastify.log` instance.
 - Avoid multi-parameter and RegExp-heavy hot-path routes; static routes are fastest, then single-param routes.
