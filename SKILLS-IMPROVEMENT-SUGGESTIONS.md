@@ -92,13 +92,9 @@ references a `scripts/` or `references/` file that doesn't exist.
   `high_assurance_rust/SKILL.md` (lines 8, 82, 105). Either create a
   `rust-testing` skill (testing mechanics currently live nowhere) or retarget
   these references.
-- **`dev-review` §4 is out of sync with the review trio.** It hardwires the
-  `gemini-review-code` skill plus *inline* `codex exec` / OpenCode invocations,
-  and never mentions `codex-review-code` or `claude-review-code`, which now exist
-  and do that job with sandboxing, timeouts, and prompt-injection fencing the
-  inline snippets lack. §4 should route to whichever of the three skills is
-  installed, in a defined preference order. This is the single most impactful
-  cross-family fix.
+- **`dev-review` §4 second-opinion routing.** Resolved: §4 now routes to the
+  `claude-review-code` skill, which provides the sandboxing, timeouts, and
+  prompt-injection fencing that inline CLI snippets lack.
 
 ---
 
@@ -198,10 +194,9 @@ Only 2 of 82 skills use `references/` for progressive disclosure
 - `clickhouse/SKILL.md:61` and `valkey/SKILL.md:49,64` use bare
   `[js-conventions]` bracket syntax with no link target — renders as literal
   text; make it plain prose or a real link.
-- The review-trio descriptions bake in volatile model names
-  (`Gemini 3.1 Pro (High)`, `gpt-5.3-codex`, Opus `--effort xhigh`). They're
-  overridable and documented, but these are the lines most likely to go stale —
-  worth a periodic check.
+- `claude-review-code`'s description bakes in a volatile model name (Opus
+  `--effort xhigh`). It's overridable and documented, but this is the line most
+  likely to go stale — worth a periodic check.
 - `node-rust-addon`'s `node:ffi` section is forward-looking and well-hedged;
   confirm the API shipped as described before leaning on it.
 - `sui-common-ops` / `sui-sdk-js` reference `0x2::balance::send_funds` and the

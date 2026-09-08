@@ -2,10 +2,9 @@
 #
 # review.sh — delegate a code review of local git state to the Claude Code CLI (`claude`).
 #
-# Mirrors the workflow of the Gemini/Antigravity review skill: detect the review
-# scope from git, capture the exact diff into a self-contained review brief, then
-# hand the brief to `claude` running non-interactively (--print) and stream its
-# verdict to stdout.
+# Detects the review scope from git, captures the exact diff into a self-contained
+# review brief, then hands the brief to `claude` running non-interactively
+# (--print) and streams its verdict to stdout.
 #
 # The review is FORCED to run on Opus at xhigh reasoning effort
 # (--model opus --effort xhigh), independent of the caller's own session model.

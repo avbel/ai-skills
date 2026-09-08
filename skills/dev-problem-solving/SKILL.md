@@ -87,7 +87,7 @@ This doc is the only document produced — the implementation itself follows `de
 
 Before implementing, review the build plan — plans are cheapest to fix now:
 
-1. **Second opinion when available** (same discovery order as `dev-review`): pass the doc to `gemini-review-code`-style / Codex / Gemini CLI with "find holes in this plan: missed cases, ordering problems, hidden risks, simpler alternatives".
+1. **Second opinion when available** (same route as `dev-review`): pass the doc to the `claude-review-code` skill with "find holes in this plan: missed cases, ordering problems, hidden risks, simpler alternatives".
 2. **Self-review otherwise**, adversarially: What breaks mid-rollout if we stop after step 2? What does this assume about load/data shape that nobody verified? Which step is secretly two steps?
 3. Fold findings into the doc, show the user the delta, get the go-ahead.
 

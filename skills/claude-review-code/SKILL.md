@@ -6,15 +6,14 @@ description: Run a second-opinion code review of local git changes by delegating
 # Claude Review Code
 
 Delegate a code review of your local git state to the Claude Code CLI (command
-`claude`), running non-interactively. This is the Claude-native counterpart to
-the `gemini-review-code` skill: it detects what changed, captures the exact diff
-into a self-contained review brief, hands it to `claude --print`, and returns the
-verdict.
+`claude`), running non-interactively: it detects what changed, captures the exact
+diff into a self-contained review brief, hands it to `claude --print`, and returns
+the verdict.
 
 The review is **forced onto Opus at `xhigh` reasoning effort**
 (`--model opus --effort xhigh`), independent of whatever model the calling
 session uses. The point is a maximal-effort, independent second opinion — useful
-as the cross-agent validation step this repo requires before merging a new skill
+as the independent validation step this repo requires before merging a new skill
 (see the root `AGENTS.md`), or any time you want a heavyweight reviewer on a diff.
 
 **This skill is review-only.** It never edits, fixes, or stages anything — its

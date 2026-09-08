@@ -1,11 +1,11 @@
 ---
 name: dev-review
-description: Orchestrated code review — spec-completeness audit, production checklist, security pass, edge-case test coverage audit, and a second opinion from another AI agent (Gemini/Codex) when available. Use when the user says "review this", "review my changes/PR", "is this ready to merge", or before merging work from dev-feature or dev-problem-solving.
+description: Orchestrated code review — spec-completeness audit, production checklist, security pass, edge-case test coverage audit, and an independent second opinion when available. Use when the user says "review this", "review my changes/PR", "is this ready to merge", or before merging work from dev-feature or dev-problem-solving.
 ---
 
 # Code Review (Orchestrated)
 
-A review pass that combines three lenses: the production checklist, a test-coverage audit, and — when another agent is installed — an independent second opinion. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
+A review pass that combines three lenses: the production checklist, a test-coverage audit, and — when a reviewer skill is installed — an independent second opinion. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
 
 ## Workflow
 
@@ -89,14 +89,13 @@ Code inside strings gets zero help from the host language's compiler — a typo 
 
 ### 4. Second opinion (when available)
 
-An independent reviewer catches blind spots the authoring agent shares with itself. Delegate through one of the dedicated review skills — they handle sandboxing, timeouts, and prompt-injection fencing that ad-hoc CLI invocations lack. Check for installed skills, in order (pick a reviewer from a *different* vendor than the authoring agent when possible):
+An independent reviewer catches blind spots the authoring agent shares with itself. Delegate through the dedicated review skill — it handles sandboxing, timeouts, and prompt-injection fencing that ad-hoc CLI invocations lack:
 
-1. `gemini-review-code` skill → `bash ~/.claude/skills/gemini-review-code/scripts/review.sh` (add `--adversarial` for risky changes)
-2. `codex-review-code` skill → `bash ~/.claude/skills/codex-review-code/scripts/review.sh` (add `--adversarial` for risky changes)
-3. `claude-review-code` skill → `bash ~/.claude/skills/claude-review-code/scripts/review.sh` (add `--adversarial` for risky changes)
-4. Only if none of the skills is installed, fall back to a raw CLI on PATH (codex / opencode / gemini) with a non-interactive adversarial review prompt over `git diff <base>...HEAD`. Re-verify any claim the reviewer makes about repo state yourself (`git status`, read the cited lines) before repeating it.
+- `claude-review-code` skill → `bash ~/.claude/skills/claude-review-code/scripts/review.sh` (add `--adversarial` for risky changes)
 
-Run **one** second-opinion pass, not all of them. If none is available, say so in the verdict ("no second opinion available") — don't silently skip. If the second reviewer contradicts your finding, present both views; don't suppress either.
+The delegated review runs in a fresh session on a maximal-effort model, so it reasons from the diff alone rather than from this session's assumptions. Re-verify any claim it makes about repo state yourself (`git status`, read the cited lines) before repeating it.
+
+Run **one** second-opinion pass. If the skill isn't installed, say so in the verdict ("no second opinion available") — don't silently skip. If the second reviewer contradicts your finding, present both views; don't suppress either.
 
 ### 5. Verdict
 
