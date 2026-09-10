@@ -35,10 +35,12 @@ When an option's feasibility is uncertain — "is the library fast enough?", "do
 
 Generate **2–4 genuinely distinct approaches** (not one approach with three knob settings). Force different angles:
 
-- *Minimal:* smallest change that solves it — always include this one
+- *Minimal:* smallest complete change using existing code, standard-library/native features, or installed dependencies — always include this one
 - *Library:* an actively maintained off-the-shelf solution
 - *Structural:* fix the design so the problem class disappears
 - *Contrarian:* question the premise — is the stated problem the real problem? (include only when the premise is genuinely questionable)
+
+Judge maintenance by the concepts, dependencies, and boundaries a reader must understand. State what current need justifies each proposed abstraction; future flexibility alone is insufficient. Prefer the direct option when it meets the same contract. Keep useful boundaries and safeguards even when they take more lines (see `dev-code-style`).
 
 Present as a compact comparison the user can react to:
 
@@ -88,12 +90,12 @@ This doc is the only document produced — the implementation itself follows `de
 Before implementing, review the build plan — plans are cheapest to fix now:
 
 1. **Second opinion when available** (same route as `dev-review`): pass the doc to the `claude-review-code` skill with "find holes in this plan: missed cases, ordering problems, hidden risks, simpler alternatives".
-2. **Self-review otherwise**, adversarially: What breaks mid-rollout if we stop after step 2? What does this assume about load/data shape that nobody verified? Which step is secretly two steps?
+2. **Self-review otherwise**, adversarially: What breaks mid-rollout if we stop after step 2? What does this assume about load/data shape that nobody verified? Which step is secretly two steps? Which helper, interface, option, or dependency can be omitted without weakening the chosen solution?
 3. Fold findings into the doc, show the user the delta, get the go-ahead.
 
 ## Phase 5 — Build (parallelize where the plan allows)
 
-Implement per `dev-feature` discipline for each step, and **fan out independent steps to parallel subagents** instead of running them sequentially — that's why the plan marks dependencies:
+Implement per `dev-feature` discipline for each step, with `dev-code-style`'s clear names, justified abstractions, and sparse comments. Keep extended design rationale in the solution doc; source comments carry only context needed at that location. **Fan out independent steps to parallel subagents** instead of running them sequentially — that's why the plan marks dependencies:
 
 - **Parallel-safe:** steps marked `parallel-ok` that touch **disjoint files/modules** (the plan's "files/areas touched" line is the check). Dispatch them as concurrent agents in one batch; each agent gets its plan step verbatim, the solution doc's Decision section, and the anti-gaming contract: *do not delete, skip, weaken, or narrow tests to reach green; do not refactor unrelated code; do not add dependencies beyond the plan; if blocked, report back instead of working around*.
 - **Also parallelize the always-independent work:** writing test scaffolding/mocks for step N+1 while step N is built; research tasks (capturing real API responses per `dev-testing`); documentation-of-record updates.

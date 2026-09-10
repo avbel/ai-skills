@@ -19,7 +19,9 @@ Implement without presenting a plan or awaiting approval. Raise only material co
 
 ## 3. Make the Smallest Complete Change
 
-Follow the local pattern; reuse existing code. Add only the code, tests, and user-facing docs the request requires — no unrelated cleanup, speculative options, one-use abstractions, or new dependencies where existing code or the standard library suffices. Deliver the full behavior: no stubs, placeholders, silent scope cuts, weakened tests, or hidden follow-up work.
+Follow the local pattern; reuse suitable project code, standard-library/native features, and installed dependencies. Add only the code, tests, and user-facing docs the request requires — no unrelated cleanup, speculative options, forwarding wrappers, or new packages where existing capabilities suffice. Extract only for a current shared rule, meaningful boundary, or clearer complex operation; leave obvious logic inline. Deliver the full behavior: no stubs, placeholders, silent scope cuts, weakened tests, or hidden follow-up work.
+
+Use precise names and straightforward control flow. Skip comments on obvious code; keep only brief rationale or constraints beside the code that needs them, plus required docs and directives. Apply `dev-code-style` without turning compactness into dense one-liners.
 
 ## 4. Verify and Report
 

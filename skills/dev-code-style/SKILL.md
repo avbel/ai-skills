@@ -1,55 +1,62 @@
 ---
 name: dev-code-style
-description: Commenting and code-style discipline for any language — moderate comments, no comment noise, self-documenting code first. Use when writing or editing source code in any project, or when the user asks to clean up comments or complains about over-commented / under-commented code.
+description: Compact, readable code with justified abstractions and sparse, purposeful comments. Use when writing, editing, or reviewing source code, or when the user asks to simplify code, avoid overengineering, or remove comment noise.
 ---
 
-# Code Style — Comments Discipline
+# Code Style — Compact and Readable
 
-Keep comment density moderate. Code explains **what**; comments explain **why**.
+Write only what the task needs, with names and control flow a reader can understand directly. Compactness comes from removing unnecessary concepts and indirection; keep normal formatting and useful intermediate variables. Code explains **what**; comments preserve context the code cannot express.
 Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
 
-## The Ratio Rule
+## Before Adding Code
 
-- Never write more comment lines than the code they describe. 3 comment lines for 1 line of code is noise — delete or compress.
-- A good target for application code: roughly 1 comment per 10–20 lines, concentrated where the code is genuinely non-obvious.
-- Zero comments is acceptable for straightforward code. Silence beats narration.
+Read the affected flow and its callers, then choose the simplest implementation that meets the actual contract:
 
-## Write Comments Only For
+1. Reuse suitable code already in the project when its semantics and module boundary fit.
+2. Prefer standard-library or native platform capabilities when they cover the required behavior.
+3. Use an installed dependency when it fits better; add a dependency only when its benefit justifies the ongoing cost.
+4. Otherwise write the small, direct implementation. Omit speculative options, extension points, and scaffolding.
 
-- **Why, not what** — a non-obvious decision, trade-off, or constraint the code cannot express: `// retry once: the vendor API drops ~2% of first attempts`
-- **Surprises** — behavior that contradicts a reasonable first reading (intentional fallthrough, deliberate off-by-one, ordering that matters).
-- **External contracts** — links to specs, RFCs, issue trackers, or vendor docs the code implements.
-- **Warnings** — footguns for the next editor: `// do not reorder: init() must run before config load`
-- **Public API docs** — doc comments (JSDoc / rustdoc / godoc) on exported functions and types, in the format the ecosystem's tooling consumes. One concise sentence beats a template with empty `@param` stubs.
+Preserve requested behavior, validation at trust boundaries, necessary error handling, security, accessibility, and meaningful tests. A shorter diff that leaves the root cause or a requirement unresolved is incomplete.
 
-## Never Write
+## Make the Code Explain Itself
 
-- Comments that restate the line: `// increment counter` above `counter += 1`
-- Section banners (`// ===== HELPERS =====`) — use file/module structure instead.
-- Commented-out code — delete it; git remembers.
-- `TODO`/`FIXME` for work that was part of the current task — either do it now or surface it to the user and get an explicit OK to defer. A TODO the user never saw is a silently dropped requirement, not a comment.
-- Changelog comments (`// fixed by X on 2024-01-05`, `// updated for ticket-123`) — that's what commit messages are for.
-- Comments addressed to a reviewer explaining why the change is correct — put that in the PR description.
-- Empty doc-comment templates auto-filled with parameter names.
+- Use domain names and explicit units: `timeoutMs` needs no "timeout in milliseconds" comment. Avoid vague names such as `data` or `manager` when a more precise name fits.
+- Keep related logic together, with straightforward branches and early returns where they help. Prefer a readable loop or named intermediate value over a dense expression, nested ternaries, or a chain of trivial helper calls.
+- Let appropriate types express states and invariants. Do not add a type hierarchy, wrapper, or runtime assertion solely to replace a useful comment.
+- Follow the project's formatter and language conventions. Do not shorten names, pack statements onto one line, or merge distinct responsibilities to reduce line/file counts.
 
-## Before Commenting, Try To Make The Code Say It
+## Require a Current Reason for an Abstraction
 
-1. Rename: a precise function/variable name deletes most "what" comments.
-2. Extract: a well-named small function replaces a paragraph explaining a block.
-3. Types/asserts: an enum, a narrow type, or an assertion states an invariant better than prose.
+- Keep short, clear logic inline by default. Avoid forwarding wrappers, factories for a single fixed construction, and interfaces or configuration introduced only for hypothetical future use.
+- Extract when it centralizes a rule that must stay consistent, isolates a cohesive complex operation, or serves a current boundary such as resource ownership or an existing test seam. A single caller can justify a helper when the name and boundary make the flow easier to follow.
+- Reuse depends on shared meaning and change ownership. Similar syntax or a second occurrence alone does not justify a shared module; a little local repetition can be clearer than coupling unrelated concepts. Do not expose a private helper just to avoid a few repeated lines.
+- Before adding a layer, identify what present complexity it removes. If the answer is only "cleaner", "for later", or "to avoid a comment", keep the direct code. Put any substantial design rationale in the review/decision record, not a source-code essay.
 
-Only when none of these work, write the comment.
+## Comments: Only Information the Reader Would Otherwise Miss
 
-## Match the Codebase
+Default to no comments for obvious code. There is no comment quota or comment-to-code ratio. First try a clearer name or simpler flow; if important context remains, keep the shortest sufficient comment beside the affected code, usually one sentence.
 
-- Mirror the surrounding file's comment density, doc-comment style, and language (don't introduce JSDoc into a repo that doesn't use it).
-- Follow the project's formatter/linter config as the single source of truth for formatting; never hand-format against it.
-- If ecosystem convention skills are installed (`js-conventions`, `rust-conventions`, `move-conventions`), they take precedence for language-specific rules.
+Keep comments for non-obvious reasons, external constraints, intentional surprises, and invariants a later edit could break. For example, `// Keep the lock through publish: consumers can read immediately.` explains an ordering requirement; `// publish the event` only narrates a call. Explain a necessary workaround or known limit where it matters, with a source/issue link when useful.
+
+Preserve required API documentation, license headers, tooling directives, and safety rationale (including unsafe-code invariants). Document public contracts the signature cannot convey, such as units, errors, ownership, and side effects; follow ecosystem requirements without filling obvious private helpers with doc templates. Correctness may require more than one sentence.
+
+Omit or remove within the edited area:
+
+- Narration of obvious assignments, loops, branches, returns, or test arrange/act/assert steps.
+- Section banners, empty doc templates, changelog notes, and commented-out code. Do not create extra modules merely to replace banners.
+- Reviewer-facing explanations of the patch; put them in the PR description.
+- TODOs or stubs for current requirements: finish the work or explicitly agree on deferral with the user. Do not hide missing behavior in a comment.
 
 ## Self-Check Before Finishing an Edit
 
-Scan the diff you produced:
+Review the touched code without expanding into unrelated cleanup:
 
-1. Any comment that would survive being deleted with zero information loss? Delete it.
-2. Any comment block longer than the code under it? Compress to one line or delete.
-3. Any "what" comment fixable by a rename? Rename instead.
+1. Can a reader follow the behavior from names and local control flow without decoding dense expressions or chasing trivial helpers?
+2. Does each new helper, type, option, file, or dependency earn its place today?
+3. Does each comment add necessary information, with no removable filler? Keep required documentation and directives even when the code looks obvious.
+4. Did simplification preserve behavior and the checks that establish it?
+
+## Inspiration
+
+[Ponytail](https://github.com/DietrichGebert/ponytail), especially its [implementation ladder](https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail/SKILL.md), informed the preference for reuse, built-ins, and minimal implementation. These rules prioritize readability and the full task contract, without line-count targets, forced one-liners, or branded comments.

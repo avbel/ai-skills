@@ -44,9 +44,11 @@ When print-debugging stalls — state mutates unexpectedly, timing matters, the 
 ## Phase 3 — Fix and Lock It In
 
 1. Write the failing test **first** (it exists from Phase 1 reproduction — commit it), placed at a stable seam (public interface, entry point). **If no correct seam exists for the regression test, that is itself a finding** — report the architectural gap instead of wedging a test into internals.
-2. Fix the root cause, not the symptom. If the honest fix is large, say so — don't band-aid silently.
+2. Trace the affected callers and fix the root cause at the boundary that owns the rule, rather than scattering workarounds. Keep the fix direct; add no wrapper, fallback, or configuration without a demonstrated need. If the honest fix is large, say so — don't band-aid silently.
 3. Run the full suite, not just the new test. Record the confirmed root cause in the commit message.
 4. Ask "what would have prevented this bug?" — after the fix, not before. If the hunt took real effort, capture the answer via `dev-knowledge` (symptom → root cause → what didn't work → fix) so the next occurrence costs minutes.
+
+Before finishing, remove temporary debug instrumentation introduced for the hunt. Use `dev-code-style`: clear names and control flow, with a brief comment only when the fix depends on a non-obvious invariant or external constraint. Preserve required safety rationale and useful operational logging; put the investigation history in the commit/knowledge note.
 
 ## Anti-patterns
 

@@ -40,13 +40,13 @@ Never stub `fetch`/`reqwest` inline across the codebase. Stand up **one mock ser
 - Rust → `wiremock` / `httpmock`
 - Language-agnostic → WireMock (container)
 
-Structure the code so mocks stay simple: wrap the vendor behind an **SDK-style interface** (one method per operation, each returning one shape) instead of mocking a generic `fetch` — a fetch mock has to reimplement routing and grows a second API client inside the test suite.
+Use the existing client or HTTP boundary. Add a vendor adapter only when it centralizes actual protocol/translation logic or serves a current application boundary; do not add a production interface or forwarding wrapper solely to make a mock convenient. Keep mock handlers limited to the responses each scenario needs.
 
 **The critical step — verify mock fidelity.** A mock that drifts from the real API produces green tests and production failures. Before trusting mock data:
 
 1. **Capture a real response** once (curl the sandbox/real API, or copy a verbatim example from the vendor's current docs) and use it as the mock body. Do not hand-write response JSON from memory.
 2. **Diff against the vendor's published schema** (OpenAPI spec if available) — field names, nesting, types, nullability, pagination envelope.
-3. **Record where each mock body came from** in a one-line comment: `// captured from GET /v2/users 2026-07-12, api-version 2024-11`.
+3. **Record where each mock body came from** once alongside the fixture, in metadata or a brief comment: `// captured from GET /v2/users 2026-07-12, api-version 2024-11`. Do not repeat provenance at every use.
 4. Mock the **failure shapes** too: the vendor's actual 429/5xx error body and headers (e.g. `Retry-After`), not an invented `{error: "oops"}`.
 5. If a sandbox exists, keep **one opt-in live smoke test** (skipped by default, run in CI nightly or on demand) that asserts the real response still matches the mock's shape — this catches drift.
 
@@ -55,6 +55,10 @@ Structure the code so mocks stay simple: wrap the vendor behind an **SDK-style i
 - **Tautological tests:** the expected value must come from an independent source of truth — the spec, a captured real output, a hand computation — never recomputed with the same logic as the code under test. A test that mirrors the implementation passes when both are wrong.
 - **Implementation-coupled tests:** test at stable seams (public interfaces, entry points), not private internals — internals-coupled tests break on every refactor without ever catching a bug. If a behavior can only be tested through internals, that's a design finding, not a reason to reach in.
 - **Horizontal slicing:** don't write all tests upfront and then all implementation. Work in vertical slices — one test, make it pass, next test — so each failure has one candidate cause.
+
+## Keep Test Code Readable
+
+Apply `dev-code-style` to tests too. Let scenario names, fixture names, and explicit assertions explain the behavior; skip comments narrating setup, calls, or assertions. Keep only non-obvious fixture provenance, timing constraints, or reasons an expected value is correct. Reuse existing setup; add a helper only when shared setup or a meaningful operation becomes clearer. Avoid generic fixture builders, test base classes, and mock factories for a single simple case. A little explicit repetition is fine; retain each scenario's distinguishing input and expectation where the reader can see them. Simplification must not weaken coverage or assertions.
 
 ## Edge-Case Checklist
 

@@ -1,6 +1,7 @@
 ---
 name: dev-e2e-testing
-description: End-to-end tests against a production-parity stack — real databases dropped per run, disposable Valkey/brokers, local blockchain networks, real sockets, mocks only at external API boundaries, mandatory network-fault injection. Use when writing e2e tests or asked to "test against a real stack" or "test network failures". Everyday suite: dev-testing.
+description: >-
+  End-to-end tests against a production-parity stack — real databases dropped per run, disposable Valkey/brokers, local blockchain networks, real sockets, mocks only at external API boundaries, mandatory network-fault injection. Use when writing e2e tests or asked to "test against a real stack" or "test network failures". Everyday suite: dev-testing.
 ---
 
 # E2E Testing — Production-Parity Tier
@@ -77,7 +78,7 @@ Create topics/queues in setup, unique names per worker (`orders-${WORKER_ID}`), 
 
 ### External vendor APIs: the only mock
 
-Anything you genuinely cannot run locally (Stripe, OpenAI, a partner's API) gets a **standalone mock server on a real port** — WireMock container, `msw`'s `setupServer` is not enough here; it must be a separate process reachable over TCP so faults can be injected on that hop too. All of `dev-testing`'s mock-fidelity rules apply verbatim: captured real bodies, schema-diffed, provenance comments, real 429/5xx failure shapes.
+Anything you genuinely cannot run locally (Stripe, OpenAI, a partner's API) gets a **standalone mock server on a real port** — WireMock container, `msw`'s `setupServer` is not enough here; it must be a separate process reachable over TCP so faults can be injected on that hop too. All of `dev-testing`'s mock-fidelity rules apply verbatim: captured real bodies, schema-diffed, provenance recorded once per fixture, real 429/5xx failure shapes.
 
 ### SDKs: generate runnable code, run it
 
@@ -112,6 +113,8 @@ The assertions on the right are the point: fault tests verify **behavior under f
 For packet-level UDP faults Toxiproxy doesn't cover, use `tc netem` (loss, reorder, duplication) inside the container: `tc qdisc add dev eth0 root netem loss 20%`.
 
 ## Suggested Layout & Config
+
+Adapt the existing harness; the layout below is illustrative, not scaffolding to generate in full. Add only the files and services exercised by the requested journeys and fault cases. Keep setup and assertions direct, extracting helpers only for shared lifecycle work or a cohesive complex operation. Follow `dev-code-style`: descriptive journey names, brief comments for non-obvious constraints, no narration of each step. Compactness must preserve readiness, isolation, cleanup, and failure assertions.
 
 ```
 e2e/

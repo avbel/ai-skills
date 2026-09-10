@@ -175,7 +175,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 
 ### Development Cycle
 
-Cross-language workflow skills sharing one philosophy: cheapest sufficient process, KISS, second opinions, compounding knowledge. Start with `dev-cycle`.
+Cross-language workflow skills sharing one philosophy: cheapest sufficient process, compact readable code, justified abstractions, purposeful comments, second opinions, compounding knowledge. Start with `dev-cycle`.
 
 | Skill | Covers |
 |-------|--------|
@@ -188,7 +188,7 @@ Cross-language workflow skills sharing one philosophy: cheapest sufficient proce
 | `dev-e2e-testing` | Production-parity e2e: real services, local chains, network-fault injection |
 | `dev-debug` | Root-cause debugging, debugger configs for IDEs and CLI |
 | `dev-knowledge` | Capture solved problems as linked notes in docs/knowledge |
-| `dev-code-style` | Moderate comments, no comment noise, self-documenting code |
+| `dev-code-style` | Compact, readable code with justified abstractions and sparse, purposeful comments |
 
 ### Practices
 

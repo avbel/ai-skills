@@ -20,14 +20,14 @@ A review pass that combines three lenses: the production checklist, a test-cover
 If a plan, solution doc, issue, or user request exists for this change (`docs/solutions/`, a `dev-feature` plan message, the conversation), check the diff against it **item by item** before looking at quality. AI-authored diffs habitually drop spec parts silently — hunt for exactly that:
 
 - **Silently skipped requirements** — walk each spec item and point at the code that implements it; anything you can't point at is a blocking finding, even if the code "looks complete".
-- **Stubs posing as implementation** — grep the diff for `TODO`, `FIXME`, `XXX`, `unimplemented`, `not implemented`, `NotImplementedError`, `todo!()`, `throw new Error("...later...")`, empty function bodies, and hardcoded placeholder returns. Every hit is either (a) explicitly declared to the user with a reason, or (b) a blocking finding. A TODO the user never heard about is a silently dropped requirement wearing a comment.
+- **Stubs posing as implementation** — search the diff for `TODO`, `FIXME`, `XXX`, `unimplemented`, `not implemented`, `NotImplementedError`, `todo!()`, `throw new Error("...later...")`, empty function bodies, and hardcoded placeholder returns. Inspect each hit in context: block when it leaves a current requirement unimplemented without an agreed deferral, and name the missing behavior. A marker alone is not a spec gap; preserve accurate, useful comments about upstream limitations or workarounds when the current contract is met.
 - **Quietly narrowed scope** — the spec said "all users", the code handles "active users"; the spec said retry, the code logs and continues. Compare behavior, not just structure.
 
 ### 2b. First-party quality review
 
 Apply the production checklist from the `code-review` skill if installed (observability, backward compatibility, migrations, idempotency/concurrency/timeouts, PR quality). Otherwise cover at minimum: correctness, error handling, silent failure paths, backward compatibility of anything another system consumes, and migration safety.
 
-Also check style: comment noise and density per `dev-code-style`.
+Check readability and necessity per `dev-code-style`: new abstractions must remove current complexity or serve a real boundary; names and control flow should explain ordinary behavior. Flag speculative options, pass-through wrappers, needless dependencies, dense expressions, and comments that merely narrate the code. Suggest a concrete simplification with a reader or maintenance benefit, not a line-count target. Preserve required docs, directives, safety rationale, and non-obvious constraints; do not request helper extraction merely to replace a comment.
 
 **Unused-code check (warn and ask, never silently delete):** look for code the diff leaves dead:
 - Code **orphaned by this change** — the old implementation kept alongside its replacement, helpers whose last caller was just removed, now-unreferenced imports/exports/config keys/env vars
@@ -36,7 +36,7 @@ Also check style: comment noise and density per `dev-code-style`.
 
 Report each item under "Unused code" in the verdict and **ask the user whether to remove it** — one grouped question, not one per item. Don't flag code that is plausibly used externally (public library API, reflection/DI-loaded, framework hooks) — say it *looks* unused and why you're unsure. If the user approves removal, delete it fully (git remembers) rather than commenting it out.
 
-**Duplication check:** for each nontrivial added function/block, grep the codebase for an existing equivalent (similar name, same signature shape, same constants/regexes/error strings). If the logic already exists as a private helper elsewhere, the finding is "promote and reuse, don't copy" — make it public / move it to a shared module and call it from both places. Two copies of the same logic is a should-fix finding; three or more, or copied *business* logic, is blocking.
+**Duplication check:** for nontrivial added logic, search for an existing equivalent. Recommend reuse when the code expresses the same rule and should change together across compatible module boundaries. Similar syntax or the number of copies alone is not a finding. Avoid exposing private APIs or coupling unrelated concepts just to deduplicate a few lines. Name the actual drift risk and a suitable owner for shared logic; block only when duplication causes a concrete correctness or contract failure.
 
 ### 3. Edge-case test audit
 
@@ -104,7 +104,7 @@ Present results in this order, most severe first:
 ```
 ## Review: <scope, N files>
 
-### Spec gaps & undisclosed TODOs
+### Spec gaps & incomplete work
 - <spec item> — not implemented / stubbed at file.ts:42, user was not told
 
 ### Security
@@ -114,7 +114,7 @@ Present results in this order, most severe first:
 - file.ts:42 — <issue, why it breaks, suggested fix>
 
 ### Should fix
-- file.ts:88 — duplicates private helper `parseRange` in util/range.ts — promote it and reuse
+- file.ts:88 — duplicates the same range-validation rule; reuse its existing shared owner to prevent drift
 - ...
 
 ### Missing edge-case tests

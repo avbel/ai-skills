@@ -5,7 +5,7 @@ description: Router and shared philosophy for the dev-* development-cycle skill 
 
 # Development Cycle — Router
 
-Pick **one** workflow per task and follow it. Each is a separate skill loaded only when needed — don't load more than the one you're routing to.
+Pick **one primary workflow** per task and follow it. Load supporting skills only when needed; `dev-code-style` supplies the shared code and comment guidance for implementation and review.
 
 ## Routing
 
@@ -19,14 +19,14 @@ Pick **one** workflow per task and follow it. Each is a separate skill loaded on
 | Writing tests / "how to test this" | `dev-testing` |
 | E2E suite against a real stack; network-failure / resilience testing; SDK smoke tests | `dev-e2e-testing` |
 | Lesson worth keeping; "remember this"; task start in a repo with `docs/knowledge/` | `dev-knowledge` |
-| Writing any code (comments discipline) | `dev-code-style` |
+| Writing or reviewing code; simplifying abstractions or comments | `dev-code-style` (supporting skill) |
 
 Ambiguous between lite and coordinated feature work? Start with `dev-feature-lite`; escalate when code inspection finds sequencing or contract alignment across behavioral surfaces, a real design fork, a cross-cutting migration, or material risk. Ambiguous between a coordinated feature and problem-solving? Start with `dev-feature`; it escalates itself when it finds multiple viable architectures.
 
 ## Shared Philosophy (applies inside every dev-* skill)
 
 1. **Cheapest sufficient process.** No plan for an obvious localized change; one in-chat plan for a coordinated feature. Neither feature workflow persists a planning document unless the user asks; deeper problem-solving follows its own solution-doc contract.
-2. **KISS / library-first.** An actively maintained library or 2 lines of stdlib beat custom code. No speculative generality.
+2. **Small, readable implementation.** Reuse suitable project code, standard-library/native capabilities, or installed dependencies before adding custom machinery. Add abstractions only for current needs; use clear names and direct control flow, with brief comments only for context the code cannot express (see `dev-code-style`). Preserve the complete behavior and necessary safeguards; fewer lines alone is not success.
 3. **Ask only blockers and real forks.** Resolve facts from code, state safe assumptions, and never turn optional improvements into approval requests.
 4. **Evidence over vibes.** Read the code before proposing; reproduce before fixing; capture real API data before mocking.
 5. **Second opinions for judgment calls.** Reviews and plans get an independent agent's pass when one is installed (see `dev-review` §4).

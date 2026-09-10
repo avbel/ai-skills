@@ -43,17 +43,18 @@ Keep this plan in the conversation. Create a plan or solution Markdown file only
 
 ## Step 3 — Implement, KISS
 
-- **Library first:** if an actively maintained library solves it (recent releases, adoption), use it instead of writing custom code. Check the lockfile first — the project may already depend on something that does the job.
-- **1–2 lines beat 20:** if the stdlib or an existing utility in the repo solves it, use that. Do not build abstractions for one call site.
-- **Reuse, never copy:** before writing a helper, search the repo for existing code doing the same job. If it exists but is private to another module, **change its visibility or move it to a shared module and import it** — copying it creates two diverging implementations. Refactoring access is always cheaper than a future double-fix.
+- **Use what fits already:** inspect project utilities, standard-library/native features, and installed dependencies before writing custom code or adding a package. Choose by required behavior and maintenance cost, not popularity or line count alone.
+- **Direct code first:** keep short, clear logic local. Extract a helper or introduce an interface only when it removes current complexity, centralizes a shared rule, or serves a real boundary. A single caller is neither a ban nor a reason to abstract.
+- **Reuse with boundaries:** search for existing equivalents. Share code when semantics and ownership align; do not widen a private API or couple unrelated modules solely to eliminate similar lines. Follow `dev-code-style` for the decision criteria.
 - **No silent scope cuts:** implement every part of the agreed plan. If a part turns out harder than planned, or you're tempted to leave a `TODO`/stub — **stop and tell the user first**; never commit a TODO, placeholder, or "not implemented" path the user hasn't explicitly approved. The final report must list any approved leftovers under "Deferred", so nothing is dropped silently.
-- **No speculative generality:** implement what was asked, not what might be asked next. No config options nobody requested, no interfaces with one implementation.
+- **No speculative generality:** implement what was asked, not what might be asked next. No unused configuration, extension points, pass-through layers, or scaffolding for future implementations.
 - **Out-of-project files are read-only:** paths the user gave as samples or references that resolve outside the repo root are inputs, never targets — copy what you need into the project and adapt the copy. Editing anything outside the repo requires explicit user confirmation first.
-- Follow existing code patterns in the repo; comment per `dev-code-style`.
+- Use precise names and readable control flow per `dev-code-style`; skip obvious comments and keep necessary rationale brief and beside the relevant code. Preserve required docs, safety invariants, and directives.
 - Tests per `dev-testing` — for a small feature that usually means 1–2 integration tests plus the edge cases that apply.
 
 ## Step 4 — Finish
 
+- Review the diff for unnecessary layers, speculative code, and comment narration. Simplify within scope while preserving the full contract and meaningful tests; do not compress readable code into clever one-liners.
 - Run the project's tests/linter; fix what you broke. **Never delete, skip, weaken, or narrow a test to get green** — a test blocking you is a finding to raise with the user, not an obstacle to remove. Equally: no unrelated refactors, no dependencies beyond the plan — green via scope discipline, not via gaming the signal.
 - Report in a few sentences: what changed, where, test results. **Do not** generate `SUMMARY.md`, `CHANGES.md`, or any doc file unless asked.
 - Offer `dev-review` for a review pass; if the solution surprised you (non-obvious pitfall), capture it via `dev-knowledge` — otherwise skip that too.
