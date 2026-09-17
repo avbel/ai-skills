@@ -32,7 +32,7 @@ Check readability and necessity per `dev-code-style`: new abstractions must remo
 **Unused-code check (warn and ask, never silently delete):** look for code the diff leaves dead:
 - Code **orphaned by this change** — the old implementation kept alongside its replacement, helpers whose last caller was just removed, now-unreferenced imports/exports/config keys/env vars
 - **Newly added but never called** — speculative helpers, unused parameters, dead branches behind conditions that can't be true
-- Cheap verification: grep for the symbol's usages; run the ecosystem's dead-code tooling when available (`tsc --noUnusedLocals`, `knip`, `cargo +nightly udeps` / `#[warn(dead_code)]` output, `vulture`)
+- Cheap verification: grep for the symbol's usages; run the ecosystem's dead-code tooling when available (`tsc --noUnusedLocals`, `knip`, `cargo +nightly udeps` / `#[warn(dead_code)]` output, `vulture`). When both come back inconclusive, delete the symbol locally, run the suite, and revert — a failure names the caller grep missed. This establishes reachability only: a green suite proves nothing for a public API, a reflection/DI-loaded symbol, or anything the suite doesn't exercise, and the removal decision still belongs to the user.
 
 Report each item under "Unused code" in the verdict and **ask the user whether to remove it** — one grouped question, not one per item. Don't flag code that is plausibly used externally (public library API, reflection/DI-loaded, framework hooks) — say it *looks* unused and why you're unsure. If the user approves removal, delete it fully (git remembers) rather than commenting it out.
 
@@ -53,13 +53,19 @@ Check the diff — not the whole codebase — against this list. A security find
 - HTML rendering: `innerHTML`, `dangerouslySetInnerHTML`, unescaped template output
 - Deserialization of untrusted data (`pickle`, `yaml.load`, Java native); `eval`/`Function(string)` on anything dynamic
 - User-supplied URLs that the server fetches → SSRF (validate host allowlist, block internal ranges)
+- Untrusted text placed into a model's *instructions* — the system prompt, or one concatenated instruction-plus-input string — instead of its own user-role message → prompt injection. Blocking when the same call also attaches tools/function-calling: a successful injection then triggers real actions, not just bad text. Untrusted content in its own user message with no tools is the documented-safe pattern — not a finding.
 
 **AuthZ on every new surface.** Each new endpoint/handler/job answers two questions in code you can point to: *who may call this* (authn) and *may they touch THIS object* (object-level authz — the missing-IDOR-check is the most common diff-level hole; filter by owner/tenant in the query, not after fetch).
+
+- **Authorization read from a client-editable claim** is a bypass: a role or permission field the user can write through the platform's own API (Supabase `user_metadata`), a role in the request body, a client-set header. Privileged checks read a server-controlled source — `app_metadata`, the server session, a row the user cannot write.
+- **When the client queries the database directly**, access control lives in row-level security / security rules, and "enabled" is a claim to verify against the diff's migrations: RLS on with no policy denies everything, `USING (true)` allows everyone, and a public read policy on a storage bucket exposes every uploaded file. The policy must compare the authenticated identity (`auth.uid() = user_id`), never a role string the client controls.
 
 **Secrets & sensitive data:**
 - No credentials, API keys, or tokens in the diff (grep for `key=`, `secret`, `Bearer`, PEM headers, high-entropy literals) — env/secret-manager only
 - Nothing sensitive in logs or error responses: no passwords/tokens/PII in log lines, no stack traces or internal paths sent to clients
 - New PII fields: are they excluded from logging/serialization defaults?
+- A credential behind a **client-exposed env prefix** (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`, `EXPO_PUBLIC_`) is inlined into the shipped bundle by design, as is any key imported into client-reachable code. The finding is a *privileged* credential in that position (service/admin key, provider secret); publishable/anon keys are meant to be public and must not be flagged, or the check gets muted.
+- Any credential that reached a commit is **compromised from that commit**, not from the exploit: the finding is incomplete without the rotation step at the provider, because deleting the literal does not un-leak it. Report type, location, and a redacted preview — never echo the raw value into the verdict.
 
 **Crypto & randomness:** no hand-rolled crypto; passwords hashed with argon2/bcrypt/scrypt (never plain SHA/MD5); security tokens from a CSPRNG (`crypto.randomBytes`/`rand::rngs::OsRng`), never `Math.random()`; comparisons of secrets constant-time.
 
@@ -138,3 +144,4 @@ Verdict: ready to merge | needs changes
 - Label each finding **hard violation** (breaks behavior, contradicts spec, security) or **judgement call** (design smell, style) — judgement calls are debatable by definition and the repo's own conventions override them.
 - For large diffs, run the axes (spec, quality, security, tests) as **parallel subagents with separate contexts** so one axis's reading doesn't bias another's — and report each axis in its own verdict section, never merged or re-ranked across axes: re-ranking is how a loud style finding buries a quiet security one.
 - For self-authored code (you wrote the diff earlier in the session), always prefer the second opinion step — you share blind spots with yourself.
+- **Two failed fix rounds on the same finding end the loop.** When a finding survives two rounds of fixes, the model of the failure is wrong, not the patch — stop and hand the decision back. Report the root cause you can actually evidence, what each round changed and why it didn't hold, and the options: re-scope the change, switch approach (`dev-problem-solving`), or accept the behavior as a documented limitation. No third speculative round, and no quietly narrowing the finding until it passes.

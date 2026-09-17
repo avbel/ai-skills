@@ -102,5 +102,6 @@ Implement per `dev-feature` discipline for each step, with `dev-code-style`'s cl
 - **Keep sequential:** steps sharing files or types (unless isolated in git worktrees and merged deliberately), anything touching the same migration chain, and steps whose output changes a later step's design.
 - **Join point after each parallel batch:** run each step's validation command, then the full test suite on the merged result — cross-step integration is exactly what parallel agents can't see. A green batch is the checkpoint before dispatching the next one. More autonomy means more review, not less: diff-review each agent's output before merging it.
 - Don't force it: for a 3-step plan with a linear dependency chain, sequential is simpler and cheaper. Parallelism pays off from ~2+ genuinely independent steps.
+- **A step that fails twice stops the plan, not just the step.** After two attempts at the same step — yours or a re-dispatched agent's — don't try a third variation: what's wrong is the plan's assumption about that step. Report what each attempt changed and why it failed, then settle it with the user: split the step, revisit the Decision section, or drop it and record why. Reworking the plan costs less than a third attempt against a wrong premise.
 
 When done, capture lessons via `dev-knowledge` — link the knowledge note to the solution doc.
