@@ -1,6 +1,6 @@
 ---
 name: axum-rust
-description: Use when building or modifying Rust HTTP services with axum: Router setup, handlers, extractors, State, Json/Form/Query/Path, tower middleware, tower-http layers, error responses, tests, graceful shutdown, or axum version/API migration.
+description: "Use when building or modifying Rust HTTP services with axum: Router setup, handlers, extractors, State, Json/Form/Query/Path, tower middleware, tower-http layers, error responses, tests, graceful shutdown, or axum version/API migration."
 ---
 
 # Axum Rust

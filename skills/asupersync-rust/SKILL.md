@@ -1,6 +1,6 @@
 ---
 name: asupersync-rust
-description: Use when building or reviewing Rust with Asupersync/asupersync_rust: Cx, Scope, regions, Outcome, cancellation, two-phase channels, sync primitives, timers, lab tests, HTTP servers, or migrations from Tokio or smol.
+description: "Use when building or reviewing Rust with Asupersync/asupersync_rust: Cx, Scope, regions, Outcome, cancellation, two-phase channels, sync primitives, timers, lab tests, HTTP servers, or migrations from Tokio or smol."
 ---
 
 # Asupersync Rust

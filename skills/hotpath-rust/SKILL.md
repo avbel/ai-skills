@@ -1,6 +1,6 @@
 ---
 name: hotpath-rust
-description: Use when profiling Rust applications with pawurb/hotpath-rs: timing, allocations, CPU sampling, Tokio runtime metrics, async channels/streams/futures, static reports, live TUI, MCP server integration, or AI-assisted performance analysis.
+description: "Use when profiling Rust applications with pawurb/hotpath-rs: timing, allocations, CPU sampling, Tokio runtime metrics, async channels/streams/futures, static reports, live TUI, MCP server integration, or AI-assisted performance analysis."
 ---
 
 # Hotpath Rust

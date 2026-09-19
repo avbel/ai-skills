@@ -1,6 +1,6 @@
 ---
 name: tonic-rust
-description: Use when building or modifying Rust gRPC services with tonic: protobuf codegen, tonic-prost-build, build.rs, include_proto!, clients, servers, streaming RPCs, metadata, interceptors, TLS, compression, health checks, reflection, or gRPC error handling.
+description: "Use when building or modifying Rust gRPC services with tonic: protobuf codegen, tonic-prost-build, build.rs, include_proto!, clients, servers, streaming RPCs, metadata, interceptors, TLS, compression, health checks, reflection, or gRPC error handling."
 ---
 
 # Tonic Rust

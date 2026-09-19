@@ -1,6 +1,6 @@
 ---
 name: sui-common-ops
-description: Use when an AI agent needs common Sui operations without web search: balances, objects, package disassembly, transactions, dynamic fields, chain data, or unsigned PTB bytes using Sui CLI or Node.js 26+ .mjs helpers over @mysten/sui gRPC.
+description: "Use when an AI agent needs common Sui operations without web search: balances, objects, package disassembly, transactions, dynamic fields, chain data, or unsigned PTB bytes using Sui CLI or Node.js 26+ .mjs helpers over @mysten/sui gRPC."
 ---
 
 # Sui Common Operations

@@ -1,6 +1,6 @@
 ---
 name: sui-local-dev-usdc
-description: Spin up a local Sui dev network, deploy a USDC-pegged coin, and top up dev balances with SUI and USDC. Trigger phrases: "local sui node", "sui local dev", "usdc on local sui", "mint usdc sui dev", "sui devnet setup".
+description: "Spin up a local Sui dev network, deploy a USDC-pegged coin, and top up dev balances with SUI and USDC. Trigger phrases: \"local sui node\", \"sui local dev\", \"usdc on local sui\", \"mint usdc sui dev\", \"sui devnet setup\"."
 ---
 
 # Sui Local Dev Network with USDC

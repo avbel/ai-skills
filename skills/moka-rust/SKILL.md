@@ -1,6 +1,6 @@
 ---
 name: moka-rust
-description: Use when building or reviewing Rust in-memory caches with moka: sync::Cache, future::Cache, CacheBuilder, get_with/try_get_with read-through loading, TTL/TTI expiration, weighted eviction, eviction listeners, invalidation, run_pending_tasks, async cache usage, and cache testing.
+description: "Use when building or reviewing Rust in-memory caches with moka: sync::Cache, future::Cache, CacheBuilder, get_with/try_get_with read-through loading, TTL/TTI expiration, weighted eviction, eviction listeners, invalidation, run_pending_tasks, async cache usage, and cache testing."
 ---
 
 # Moka Rust

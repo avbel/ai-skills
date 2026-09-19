@@ -1,6 +1,6 @@
 ---
 name: opentelemetry-rust
-description: Use when building or reviewing Rust OpenTelemetry instrumentation with open-telemetry/opentelemetry-rust: traces, metrics, logs, OTLP exporters, stdout exporters, resources, propagation, sampling, tracing/log bridges, observable instruments, shutdown, and production telemetry configuration.
+description: "Use when building or reviewing Rust OpenTelemetry instrumentation with open-telemetry/opentelemetry-rust: traces, metrics, logs, OTLP exporters, stdout exporters, resources, propagation, sampling, tracing/log bridges, observable instruments, shutdown, and production telemetry configuration."
 ---
 
 # OpenTelemetry Rust

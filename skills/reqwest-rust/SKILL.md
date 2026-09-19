@@ -1,6 +1,6 @@
 ---
 name: reqwest-rust
-description: Use when building or reviewing Rust HTTP clients with reqwest: async Client, ClientBuilder, TLS backend selection, JSON/form/multipart bodies, streaming downloads/uploads, blocking API, redirects, proxies, cookies, timeouts, retries around reqwest, and HTTP error handling.
+description: "Use when building or reviewing Rust HTTP clients with reqwest: async Client, ClientBuilder, TLS backend selection, JSON/form/multipart bodies, streaming downloads/uploads, blocking API, redirects, proxies, cookies, timeouts, retries around reqwest, and HTTP error handling."
 ---
 
 # Reqwest Rust

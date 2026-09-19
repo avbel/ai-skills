@@ -1,6 +1,6 @@
 ---
 name: clap-rust
-description: Use when building or reviewing Rust command-line interfaces with clap: derive Parser/Args/Subcommand/ValueEnum, builder Command/Arg, typed value parsers, env/default handling, bool flags, repeated flags, subcommands, shell completions, help text, and CLI tests.
+description: "Use when building or reviewing Rust command-line interfaces with clap: derive Parser/Args/Subcommand/ValueEnum, builder Command/Arg, typed value parsers, env/default handling, bool flags, repeated flags, subcommands, shell completions, help text, and CLI tests."
 ---
 
 # Clap Rust

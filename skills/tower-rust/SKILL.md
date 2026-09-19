@@ -1,6 +1,6 @@
 ---
 name: tower-rust
-description: Use when building or modifying Rust services and middleware with tower: Service, Layer, ServiceBuilder, readiness, backpressure, timeouts, buffers, load shedding, concurrency/rate limits, retries, boxed services, testing, or integrating tower with axum, tonic, hyper, or custom protocols.
+description: "Use when building or modifying Rust services and middleware with tower: Service, Layer, ServiceBuilder, readiness, backpressure, timeouts, buffers, load shedding, concurrency/rate limits, retries, boxed services, testing, or integrating tower with axum, tonic, hyper, or custom protocols."
 ---
 
 # Tower Rust
