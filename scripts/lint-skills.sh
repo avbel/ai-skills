@@ -110,7 +110,7 @@ while IFS= read -r row; do
   if [ ! -d "skills/$row" ]; then
     fail "README.md row '$row' has no skills/$row directory"
   fi
-done < <(grep -oP '(?<=^\| `)[a-z0-9_-]+(?=`)' README.md)
+done < <(sed -nE 's/^\| `([a-z0-9_-]+)`.*/\1/p' README.md)
 
 if [ "$ERRORS" -gt 0 ]; then
   echo "lint-skills: $ERRORS problem(s) found" >&2
