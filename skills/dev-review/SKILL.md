@@ -1,11 +1,11 @@
 ---
 name: dev-review
-description: Orchestrated code review — spec-completeness audit, production checklist, security pass, edge-case test coverage audit, and an independent second opinion when available. Use when the user says "review this", "review my changes/PR", "is this ready to merge", or before merging work from dev-feature or dev-problem-solving.
+description: Orchestrated code review — spec-completeness audit, production checklist, security pass, and edge-case test coverage audit. Use when the user says "review this", "review my changes/PR", "is this ready to merge", or before merging work from dev-feature or dev-problem-solving.
 ---
 
 # Code Review (Orchestrated)
 
-A review pass that combines three lenses: the production checklist, a test-coverage audit, and — when a reviewer skill is installed — an independent second opinion. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
+A review pass that combines four lenses: a spec-completeness audit, the production checklist, a security pass, and an edge-case test audit. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
 
 ## Workflow
 
@@ -73,7 +73,7 @@ Check the diff — not the whole codebase — against this list. A security find
 
 **Money/quota/state-machine paths:** check for TOCTOU races — balance read then written without a transaction/lock lets two concurrent requests double-spend.
 
-**Escalate** beyond this pass when the diff touches auth flows, session handling, crypto, payments, sandboxing, or file upload handling: run the platform's dedicated security review (`/security-review` in Claude Code) or a security-focused second opinion (step 4 with the hint "adversarial security review"), and say in the verdict that you did.
+**Escalate** beyond this pass when the diff touches auth flows, session handling, crypto, payments, sandboxing, or file upload handling: run the platform's dedicated security review (`/security-review` in Claude Code), and say in the verdict that you did.
 
 ### 3c. Embedded-language check
 
@@ -93,17 +93,7 @@ Code inside strings gets zero help from the host language's compiler — a typo 
 
 **Tie-in with `dev-testing`:** every embedded SQL/GraphQL string changed in the diff must be executed by at least one integration test against the real engine (in-memory/testcontainer) — that's the only durable guard for embedded-language errors. An untested new query is a missing edge-case-test finding.
 
-### 4. Second opinion (when available)
-
-An independent reviewer catches blind spots the authoring agent shares with itself. Delegate through the dedicated review skill — it handles sandboxing, timeouts, and prompt-injection fencing that ad-hoc CLI invocations lack:
-
-- `claude-review-code` skill → `bash ~/.claude/skills/claude-review-code/scripts/review.sh` (add `--adversarial` for risky changes)
-
-The delegated review runs in a fresh session on a maximal-effort model, so it reasons from the diff alone rather than from this session's assumptions. Re-verify any claim it makes about repo state yourself (`git status`, read the cited lines) before repeating it.
-
-Run **one** second-opinion pass. If the skill isn't installed, say so in the verdict ("no second opinion available") — don't silently skip. If the second reviewer contradicts your finding, present both views; don't suppress either.
-
-### 5. Verdict
+### 4. Verdict
 
 Present results in this order, most severe first:
 
@@ -130,9 +120,6 @@ Present results in this order, most severe first:
 - old util/legacyParser.ts — last caller removed by this diff
 - newHelper() in sync.ts — added but never called
 
-### Second opinion (<agent> | none available)
-- <agreements / new findings / disagreements>
-
 Verdict: ready to merge | needs changes
 ```
 
@@ -143,5 +130,4 @@ Verdict: ready to merge | needs changes
 - Every blocking finding needs a concrete failure scenario ("when X happens, Y breaks"), not a vibe.
 - Label each finding **hard violation** (breaks behavior, contradicts spec, security) or **judgement call** (design smell, style) — judgement calls are debatable by definition and the repo's own conventions override them.
 - For large diffs, run the axes (spec, quality, security, tests) as **parallel subagents with separate contexts** so one axis's reading doesn't bias another's — and report each axis in its own verdict section, never merged or re-ranked across axes: re-ranking is how a loud style finding buries a quiet security one.
-- For self-authored code (you wrote the diff earlier in the session), always prefer the second opinion step — you share blind spots with yourself.
 - **Two failed fix rounds on the same finding end the loop.** When a finding survives two rounds of fixes, the model of the failure is wrong, not the patch — stop and hand the decision back. Report the root cause you can actually evidence, what each round changed and why it didn't hold, and the options: re-scope the change, switch approach (`dev-problem-solving`), or accept the behavior as a documented limitation. No third speculative round, and no quietly narrowing the finding until it passes.

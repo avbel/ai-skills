@@ -29,13 +29,13 @@ Ambiguous between lite and coordinated feature work? Start with `dev-feature-lit
 2. **Small, readable implementation.** Reuse suitable project code, standard-library/native capabilities, or installed dependencies before adding custom machinery. Add abstractions only for current needs; use clear names and direct control flow, with brief comments only for context the code cannot express (see `dev-code-style`). Preserve the complete behavior and necessary safeguards; fewer lines alone is not success.
 3. **Ask only blockers and real forks.** Resolve facts from code, state safe assumptions, and never turn optional improvements into approval requests.
 4. **Evidence over vibes.** Read the code before proposing; reproduce before fixing; capture real API data before mocking.
-5. **Second opinions for judgment calls.** Reviews and plans get an independent agent's pass when one is installed (see `dev-review` §4).
+5. **Second opinions for judgment calls.** Plans get an independent agent's pass when one is installed (see `dev-problem-solving` Phase 4).
 6. **Compound.** Check `docs/knowledge/INDEX.md` at task start; leave a note when a lesson was expensive (see `dev-knowledge`).
 7. **Files outside the project are read-only.** When the user attaches or points to a path outside the repo root (a sample, a reference implementation, a config from another project) — read it, quote it, copy it into the project if it's needed as a starting point, but **never edit the original**. If a task seems to require changing an out-of-project file, stop and confirm with the user first.
 
 ## Typical Chains
 
 - Simple feature: `dev-feature-lite` with focused verification
-- Coordinated feature: `dev-feature` → (`dev-testing` inline) → `dev-review`
+- Coordinated feature: `dev-feature` → `dev-review` when the user asks
 - Hard problem: `dev-problem-solving` → build (parallel agents for independent steps) → `dev-review` → `dev-knowledge`
 - Nasty bug: `dev-debug` → `dev-review` (the fix) → `dev-knowledge`

@@ -183,7 +183,7 @@ Cross-language workflow skills sharing one philosophy: cheapest sufficient proce
 | `dev-feature-lite` | Minimal path for obvious changes: implement, verify, report |
 | `dev-feature` | Coordinated features: clarify, in-chat plan, implement |
 | `dev-problem-solving` | Brainstorm approaches, decide, solution doc, reviewed build plan |
-| `dev-review` | Orchestrated review: spec audit, security pass, edge cases, second opinion |
+| `dev-review` | Orchestrated review: spec audit, security pass, edge cases |
 | `dev-testing` | Integration tests first, in-memory DBs, verified API mocks |
 | `dev-e2e-testing` | Production-parity e2e: real services, local chains, network-fault injection |
 | `dev-debug` | Root-cause debugging, debugger configs for IDEs and CLI |
