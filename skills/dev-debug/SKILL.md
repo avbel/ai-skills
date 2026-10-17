@@ -12,7 +12,7 @@ For bugs that survive the first obvious fix. The core discipline: **find the roo
 1. **Build a feedback loop first — this gate IS the skill.** One command that is red now, deterministic, fast, and runnable without a human — best is a failing test; otherwise a curl against the endpoint, a CLI run diffed against expected output, a throwaway harness script, or a `git bisect run` wrapper. Run it once and watch it fail before anything else. **No red-capable command → no fixing** — gather more data instead (logs, inputs, versions). For flaky bugs, don't chase a clean repro — raise the reproduction rate until the loop is usable: run it 100× in a loop, parallelize, inject sleeps at suspected races.
 2. **Read the actual error.** Full stack trace, exact message, line numbers — not a paraphrase.
 3. **Recent changes first:** `git log --oneline -20` on the touched files; if the bug is a regression, `git bisect run <failing-command>` finds the exact commit mechanically — prefer it over reading diffs when there are more than a handful of commits.
-4. **List 3–5 ranked falsifiable hypotheses, then test only the top one.** Each in the form "if X is the cause, changing Y will make the bug disappear" — show the list to the user before testing. Verify with evidence (a log line, an assertion, a minimized input) before changing any code.
+4. **State the best evidence-backed, falsifiable hypothesis and test it.** List alternatives only when they change the next experiment; do not invent a quota of hypotheses. Each in the form "if X is the cause, changing Y will make the bug disappear" — state the hypothesis briefly before testing. Verify with evidence (a log line, an assertion, a minimized input) before changing any code.
 5. **Tag every debug log with one token** (`[DBG-4f2a]`) so cleanup after the hunt is a single grep — never log everything and grep the noise.
 6. **After 2 failed hypotheses, stop guessing** and move to Phase 2 — the bug is in your model of the system, not in the place you're looking.
 
@@ -43,9 +43,9 @@ When print-debugging stalls — state mutates unexpectedly, timing matters, the 
 
 ## Phase 3 — Fix and Lock It In
 
-1. Write the failing test **first** (it exists from Phase 1 reproduction — commit it), placed at a stable seam (public interface, entry point). **If no correct seam exists for the regression test, that is itself a finding** — report the architectural gap instead of wedging a test into internals.
+1. Write the failing test **first** (retain the Phase 1 reproduction as a regression check), placed at a stable seam (public interface, entry point). **If no correct seam exists for the regression test, that is itself a finding** — report the architectural gap instead of wedging a test into internals.
 2. Trace the affected callers and fix the root cause at the boundary that owns the rule, rather than scattering workarounds. Keep the fix direct; add no wrapper, fallback, or configuration without a demonstrated need. If the honest fix is large, say so — don't band-aid silently.
-3. Run the full suite, not just the new test. Record the confirmed root cause in the commit message.
+3. Run the regression check and checks of affected callers, then repository-required checks on the final state. Stop when the failure is fixed and those checks pass; reopen only for new evidence. Record the confirmed root cause in the final report (and commit message when committing).
 4. Ask "what would have prevented this bug?" — after the fix, not before. If the hunt took real effort, capture the answer via `dev-knowledge` (symptom → root cause → what didn't work → fix) so the next occurrence costs minutes.
 
 Before finishing, remove temporary debug instrumentation introduced for the hunt. Use `dev-code-style`: clear names and control flow, with a brief comment only when the fix depends on a non-obvious invariant or external constraint. Preserve required safety rationale and useful operational logging; put the investigation history in the commit/knowledge note.

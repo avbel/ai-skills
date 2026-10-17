@@ -11,7 +11,7 @@ If inspection reveals unclear product behavior, sequencing or contract alignment
 
 ## 1. Inspect Just Enough
 
-Read repository instructions, the affected code and tests, and the nearest existing pattern. Locate code with targeted search and read the relevant ranges rather than whole files; batch independent searches and reads into one turn, and don't re-read what is already in context. Get facts from code and tools, not the user. Paths outside the repository stay read-only unless the user explicitly asks. Proceed once the requested behavior and smallest affected surface are clear.
+Read repository instructions, the affected code and tests, and the nearest existing pattern. Locate code with targeted search and read the relevant ranges rather than whole files; batch independent searches and reads into one turn, and don't re-read what is already in context. Get facts from code and tools, not the user. Paths outside the repository stay read-only unless the user explicitly asks. Before editing, trace the changed contract to its callers, exports, config, fixtures, and tests; include only surfaces affected by that contract. Proceed once the requested behavior and smallest complete change are clear.
 
 ## 2. Communicate Only Signal
 
@@ -25,4 +25,6 @@ Use precise names and straightforward control flow, without packing logic into d
 
 ## 4. Verify and Report
 
-Iterate with focused tests and checks on the touched area; after a fix, rerun only what failed, then run the standard suite once at the end when the repository requires it. Keep output quiet (summary reporter or the failure tail) and give long commands enough timeout to finish in one call instead of polling. Fix failures the change caused; report pre-existing or unrelated ones without expanding scope. Report: what changed, where, exact verification result. `Concern:` only for a material unresolved risk; `Notice:` only for a worthwhile out-of-scope improvement. End without a follow-up question.
+For a bug fix, reproduce the failure before editing and retain a regression check. For new nontrivial behavior, add or extend the smallest test at a stable seam that would fail if that behavior broke; existing tests suffice if they already prove it. Trivial edits need no new test. Preserve validation, data-loss handling, security, and accessibility.
+
+Iterate with focused tests and checks on the touched area; after a fix, rerun the failed check and any checks invalidated by the fix, then run repository-required checks on the final state. Stop when the requested behavior and required checks pass; expand testing only for a new failure, change, or unresolved risk. Keep output quiet (summary reporter or the failure tail) and give long commands enough timeout to finish in one call instead of polling. Fix failures the change caused; report pre-existing or unrelated ones without expanding scope. Report: what changed, where, exact verification result, and material checks that could not run. A skipped check is not a pass. `Concern:` only for a material unresolved risk; `Notice:` only for a worthwhile out-of-scope improvement. End without a follow-up question.

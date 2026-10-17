@@ -1,133 +1,59 @@
 ---
 name: dev-review
-description: Orchestrated code review — spec-completeness audit, production checklist, security pass, and edge-case test coverage audit. Use when the user says "review this", "review my changes/PR", "is this ready to merge", or before merging work from dev-feature or dev-problem-solving.
+description: Review a specified change for completeness, correctness, security, expected load, meaningful tests, and unnecessary complexity. Use for "review this", "review my changes/PR", or "is this ready to merge".
 ---
 
-# Code Review (Orchestrated)
+# Code Review
 
-A review pass that combines four lenses: a spec-completeness audit, the production checklist, a security pass, and an edge-case test audit. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
+Review the requested change and the connected behavior it can break. Correctness, security, data integrity, and compatibility take priority over shortening code. Review-only unless the user asks for fixes.
 
-## Workflow
+## 1. Establish Scope and Evidence
 
-### 1. Scope the diff
+- Honor an explicit target first: staged, uncommitted, commit, branch/base, PR, or named files. Unrelated dirty files do not change that target.
+- Without a target, use staged + unstaged + untracked changes when dirty. Otherwise use the branch diff from its actual PR/tracking base; if unavailable, resolve `origin/HEAD`, then `main`/`master`. Use merge-base comparison for branch reviews. If the result is empty or the base ambiguous, say so; do not silently review an arbitrary commit.
+- For staged/commit/PR reviews, read source at that target revision (index for staged), not a newer working-tree version. Checks run against a different state are explicitly limited evidence; use an isolated snapshot when exact-state execution is needed, preserving user changes.
+- Read the diff, then trace changed contracts through callers, callees, types, config, exports, and tests. Expand only where a reachable dependency can affect the result; do not audit the whole repository.
+- Establish relevant runtime assumptions from deployment/config/docs: process count, input sizes, trust boundaries, persistence. Label unknowns; do not invent scale requirements.
+- Use targeted searches and source ranges. Reuse evidence already in context; inspect the final changed state after fixes. Do not load other review skills merely because they are installed.
 
-- Dirty working tree → review staged + unstaged + untracked.
-- Clean tree → review the branch diff against the base (`origin/HEAD` → `main` → `master`).
-- Read surrounding code (callers, types, existing tests) — never review a diff in isolation.
+## 2. Review the Applicable Risks
 
-### 2. Spec-completeness audit (blocking findings)
+**Completeness:** map each requested requirement to behavior. Block silent omissions, unauthorized scope cuts, and stubs for current requirements. A TODO or workaround comment alone is not a defect; verify what remains unimplemented and whether deferral was agreed.
 
-If a plan, solution doc, issue, or user request exists for this change (`docs/solutions/`, a `dev-feature` plan message, the conversation), check the diff against it **item by item** before looking at quality. AI-authored diffs habitually drop spec parts silently — hunt for exactly that:
+**Correctness and compatibility:** trace inputs to outputs and side effects. Check changed return/error contracts, persisted formats, migrations, partial failures, and affected callers. A local fix must not leave the same root cause reachable elsewhere.
 
-- **Silently skipped requirements** — walk each spec item and point at the code that implements it; anything you can't point at is a blocking finding, even if the code "looks complete".
-- **Stubs posing as implementation** — search the diff for `TODO`, `FIXME`, `XXX`, `unimplemented`, `not implemented`, `NotImplementedError`, `todo!()`, `throw new Error("...later...")`, empty function bodies, and hardcoded placeholder returns. Inspect each hit in context: block when it leaves a current requirement unimplemented without an agreed deferral, and name the missing behavior. A marker alone is not a spec gap; preserve accurate, useful comments about upstream limitations or workarounds when the current contract is met.
-- **Quietly narrowed scope** — the spec said "all users", the code handles "active users"; the spec said retry, the code logs and continues. Compare behavior, not just structure.
+**Security:** every review screens for changed trust boundaries, authorization, secrets, unsafe sinks, and sensitive output. If any applies, load [security details](references/security.md) and trace the relevant flow. Cosmetic changes need no unrelated security audit. Findings need a concrete attack and impact.
 
-### 2b. First-party quality review
+**Expected load and failure:** where relevant, check concurrent requests/processes, check-then-write races, retries and duplicate side effects, bounded memory/queues, timeouts, N+1 queries, and input-dependent complexity. Tie a finding to the actual contract or supported operating envelope. A documented limit is acceptable only while that contract fits within it; comments cannot waive correctness or security.
 
-Apply the production checklist from the `code-review` skill if installed (observability, backward compatibility, migrations, idempotency/concurrency/timeouts, PR quality). Otherwise cover at minimum: correctness, error handling, silent failure paths, backward compatibility of anything another system consumes, and migration safety.
+**Tests:** identify changed nontrivial behavior with no check that would fail if it broke. Examine relevant empty/boundary inputs, duplicates/concurrency, dependency failures, and partial state. Existing tests can suffice; do not demand tests for every changed line or every hypothetical combination. Name the missing scenario and its consequence. Load `dev-testing` only when test design or fidelity needs deeper evaluation.
 
-Check readability and necessity per `dev-code-style`: new abstractions must remove current complexity or serve a real boundary; names and control flow should explain ordinary behavior. Flag speculative options, pass-through wrappers, needless dependencies, dense expressions, and comments that merely narrate the code. Suggest a concrete simplification with a reader or maintenance benefit, not a line-count target. Preserve required docs, directives, safety rationale, and non-obvious constraints; do not request helper extraction merely to replace a comment.
+**Embedded languages:** for changed SQL, GraphQL, regex, templates, or shell strings, load [embedded-language checks](references/embedded-languages.md). Host-language typechecks do not establish their validity. Use local/test engines, not production mutations.
 
-**Unused-code check (warn and ask, never silently delete):** look for code the diff leaves dead:
-- Code **orphaned by this change** — the old implementation kept alongside its replacement, helpers whose last caller was just removed, now-unreferenced imports/exports/config keys/env vars
-- **Newly added but never called** — speculative helpers, unused parameters, dead branches behind conditions that can't be true
-- Cheap verification: grep for the symbol's usages; run the ecosystem's dead-code tooling when available (`tsc --noUnusedLocals`, `knip`, `cargo +nightly udeps` / `#[warn(dead_code)]` output, `vulture`). When both come back inconclusive, delete the symbol locally, run the suite, and revert — a failure names the caller grep missed. This establishes reachability only: a green suite proves nothing for a public API, a reflection/DI-loaded symbol, or anything the suite doesn't exercise, and the removal decision still belongs to the user.
+**Necessity and readability:** prefer suitable project code, built-ins, and installed dependencies. Report speculative layers/options or duplication only with a concrete simplification and maintenance benefit. Shared meaning and ownership justify reuse; similar syntax alone does not. Preserve useful boundaries, error handling, validation, accessibility, and required documentation. No line-count targets or style-only padding.
 
-Report each item under "Unused code" in the verdict and **ask the user whether to remove it** — one grouped question, not one per item. Don't flag code that is plausibly used externally (public library API, reflection/DI-loaded, framework hooks) — say it *looks* unused and why you're unsure. If the user approves removal, delete it fully (git remembers) rather than commenting it out.
+**Dead code:** check usages, exports, registration, and dynamic/public consumers before claiming code is unused. Tooling and a green suite are supporting evidence, not proof of unreachability. Never delete code experimentally in the user's working tree during a review. Report uncertainty; remove only within an authorized fix scope.
 
-**Duplication check:** for nontrivial added logic, search for an existing equivalent. Recommend reuse when the code expresses the same rule and should change together across compatible module boundaries. Similar syntax or the number of copies alone is not a finding. Avoid exposing private APIs or coupling unrelated concepts just to deduplicate a few lines. Name the actual drift risk and a suitable owner for shared logic; block only when duplication causes a concrete correctness or contract failure.
+## 3. Validate Findings and Stop
 
-### 3. Edge-case test audit
+For each finding confirm the reachable trigger, actual behavior, violated expectation, and smallest sufficient fix. Discard findings disproved by surrounding code. Distinguish hard violations from judgment calls; avoid duplicating compiler/linter findings already reported.
 
-For every new or changed code path, check the diff's tests against the edge-case checklist in `dev-testing` (empty/null input, boundaries, duplicate/concurrent calls, dependency failures, partial failure). Report **which specific edge cases have no test**, as a short list — e.g. "no test for the 429 path in `syncUsers`". Missing edge-case tests are findings, same as bugs.
+Run checks needed to settle uncertainty and repository-required review checks. Record exact commands/results, including unavailable checks. Reuse unchanged results; after fixes rerun checks of affected behavior. Stop when the scoped risks are resolved, not after an arbitrary number of review passes.
 
-### 3b. Security pass (every review, findings block by default)
+Use separate reviewers only when required or when a large change has independent risk areas worth the extra context cost. Give each the exact scope, contract, relevant paths, and verification evidence rather than the entire conversation. Consolidate duplicate findings and rank by severity. A review of fixes covers changed areas and invalidated assumptions, not a repeat of every completed axis.
 
-Check the diff — not the whole codebase — against this list. A security finding needs the same rigor as any other: name the concrete attack ("attacker does X, gets Y"), not a vague "could be unsafe".
+When authorized to fix, two failed rounds on the same finding trigger a hypothesis/plan reassessment. Report the evidence and unresolved decision; do not weaken the finding or try a third speculative patch.
 
-**Untrusted input reaching a sink.** Trace every new input (request params, headers, file contents, webhook payloads, LLM output) to where it's used:
-- SQL/queries built by string concatenation instead of parameters/builders
-- Shell commands from `exec`/`spawn` with interpolated input (use arg arrays)
-- Paths joined from user input without normalization → traversal (`../`)
-- HTML rendering: `innerHTML`, `dangerouslySetInnerHTML`, unescaped template output
-- Deserialization of untrusted data (`pickle`, `yaml.load`, Java native); `eval`/`Function(string)` on anything dynamic
-- User-supplied URLs that the server fetches → SSRF (validate host allowlist, block internal ranges)
-- Untrusted text placed into a model's *instructions* — the system prompt, or one concatenated instruction-plus-input string — instead of its own user-role message → prompt injection. Blocking when the same call also attaches tools/function-calling: a successful injection then triggers real actions, not just bad text. Untrusted content in its own user message with no tools is the documented-safe pattern — not a finding.
+## 4. Report
 
-**AuthZ on every new surface.** Each new endpoint/handler/job answers two questions in code you can point to: *who may call this* (authn) and *may they touch THIS object* (object-level authz — the missing-IDOR-check is the most common diff-level hole; filter by owner/tenant in the query, not after fetch).
+Lead with the verdict and scope. List findings by severity, omitting empty groups:
 
-- **Authorization read from a client-editable claim** is a bypass: a role or permission field the user can write through the platform's own API (Supabase `user_metadata`), a role in the request body, a client-set header. Privileged checks read a server-controlled source — `app_metadata`, the server session, a row the user cannot write.
-- **When the client queries the database directly**, access control lives in row-level security / security rules, and "enabled" is a claim to verify against the diff's migrations: RLS on with no policy denies everything, `USING (true)` allows everyone, and a public read policy on a storage bucket exposes every uploaded file. The policy must compare the authenticated identity (`auth.uid() = user_id`), never a role string the client controls.
+- **Blocking:** broken requirement, correctness/security/data-loss failure, or failure under supported load.
+- **Should fix:** meaningful missing regression coverage or demonstrated maintenance/performance risk.
+- **Optional:** only a concrete worthwhile improvement, clearly non-blocking.
 
-**Secrets & sensitive data:**
-- No credentials, API keys, or tokens in the diff (grep for `key=`, `secret`, `Bearer`, PEM headers, high-entropy literals) — env/secret-manager only
-- Nothing sensitive in logs or error responses: no passwords/tokens/PII in log lines, no stack traces or internal paths sent to clients
-- New PII fields: are they excluded from logging/serialization defaults?
-- A credential behind a **client-exposed env prefix** (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`, `EXPO_PUBLIC_`) is inlined into the shipped bundle by design, as is any key imported into client-reachable code. The finding is a *privileged* credential in that position (service/admin key, provider secret); publishable/anon keys are meant to be public and must not be flagged, or the check gets muted.
-- Any credential that reached a commit is **compromised from that commit**, not from the exploit: the finding is incomplete without the rotation step at the provider, because deleting the literal does not un-leak it. Report type, location, and a redacted preview — never echo the raw value into the verdict.
+Each finding: `file:line — trigger → wrong behavior and impact; smallest fix`. Label debatable design choices as judgment calls. Keep spec gaps, security issues, and missing tests identifiable without duplicating them across sections. End with checks performed and material verification gaps. If nothing is found, say so with the scope and checks; do not imply unrun checks passed.
 
-**Crypto & randomness:** no hand-rolled crypto; passwords hashed with argon2/bcrypt/scrypt (never plain SHA/MD5); security tokens from a CSPRNG (`crypto.randomBytes`/`rand::rngs::OsRng`), never `Math.random()`; comparisons of secrets constant-time.
+## Inspiration
 
-**New dependencies:** before accepting one, check it's actively maintained, the name isn't a typosquat of the package you meant, and `npm audit`/`cargo audit`/`pip-audit` is clean for it. Pin the version.
-
-**Money/quota/state-machine paths:** check for TOCTOU races — balance read then written without a transaction/lock lets two concurrent requests double-spend.
-
-**Escalate** beyond this pass when the diff touches auth flows, session handling, crypto, payments, sandboxing, or file upload handling: run the platform's dedicated security review (`/security-review` in Claude Code), and say in the verdict that you did.
-
-### 3c. Embedded-language check
-
-Code inside strings gets zero help from the host language's compiler — a typo in embedded SQL/HTML/GraphQL passes typecheck and fails at runtime. For every string in the diff containing another language (SQL, HTML, GraphQL, regex, shell, CSS, JSON, XPath):
-
-**Validate the syntax, don't eyeball it.** In order of preference:
-1. **Execute against the real engine** — prepare the SQL on the local/test database (`PREPARE q AS <query>` in Postgres parses *and* type-checks without running), parse GraphQL with the project's graphql lib, compile the regex in a REPL, render the template.
-2. **Run a linter/parser** if available: `sqlfluff`/`pgsql-parser` (SQL), `graphql validate` against the schema, HTML validator.
-3. Only as a last resort, manual parse: matched quotes/parens, correct placeholder count and order (`$1..$n` vs args passed), keywords in valid positions.
-
-**Cross-boundary consistency:** placeholder count matches the argument list; column names/types match the current schema (check migrations in the same diff); GraphQL fields exist in the schema; HTML ids/classes referenced from JS/CSS actually exist.
-
-**Postgres-specific traps (check every SQL string):**
-- **Missing explicit casts on parameters.** Drivers send parameters as `unknown`/text; anything non-obvious needs a cast in the SQL: `$1::uuid`, `$1::jsonb`, `$1::timestamptz`, `= ANY($1::text[])`, and **enum comparisons** — `status = $1::my_schema.order_status`, never a bare `status = $1`. Also literal-to-enum: `'active'::my_schema.order_status`.
-- **Unqualified custom types.** Enums, domains, and composite types must be schema-qualified everywhere they appear — casts, `CREATE TABLE` columns, function signatures, migrations: `my_schema.my_enumeration`, not `my_enumeration`. A bare name only works while `search_path` happens to include the schema — it differs between the app, migration runner, `psql`, and pg_dump/restore, so this breaks exactly where it wasn't tested. Same rule for functions and tables outside `public` when `search_path` isn't guaranteed.
-- `NULL` handling in comparisons (`= NULL` instead of `IS NULL`), and `IN ($1)` with an array argument instead of `= ANY($1)`.
-
-**Tie-in with `dev-testing`:** every embedded SQL/GraphQL string changed in the diff must be executed by at least one integration test against the real engine (in-memory/testcontainer) — that's the only durable guard for embedded-language errors. An untested new query is a missing edge-case-test finding.
-
-### 4. Verdict
-
-Present results in this order, most severe first:
-
-```
-## Review: <scope, N files>
-
-### Spec gaps & incomplete work
-- <spec item> — not implemented / stubbed at file.ts:42, user was not told
-
-### Security
-- file.ts:57 — <attack scenario → impact, suggested fix> (blocking unless argued down)
-
-### Blocking
-- file.ts:42 — <issue, why it breaks, suggested fix>
-
-### Should fix
-- file.ts:88 — duplicates the same range-validation rule; reuse its existing shared owner to prevent drift
-- ...
-
-### Missing edge-case tests
-- <path> — no test for <case>
-
-### Unused code (remove? y/n per group)
-- old util/legacyParser.ts — last caller removed by this diff
-- newHelper() in sync.ts — added but never called
-
-Verdict: ready to merge | needs changes
-```
-
-## Rules
-
-- Review-only by default: report findings, let the user decide. Fix only when explicitly asked ("review and fix").
-- No nitpick padding — skip anything tooling already enforces (formatter, linter, typechecker). Fewer, higher-confidence findings beat exhaustive noise.
-- Every blocking finding needs a concrete failure scenario ("when X happens, Y breaks"), not a vibe.
-- Label each finding **hard violation** (breaks behavior, contradicts spec, security) or **judgement call** (design smell, style) — judgement calls are debatable by definition and the repo's own conventions override them.
-- For large diffs, run the axes (spec, quality, security, tests) as **parallel subagents with separate contexts** so one axis's reading doesn't bias another's — and report each axis in its own verdict section, never merged or re-ranked across axes: re-ranking is how a loud style finding buries a quiet security one.
-- **Two failed fix rounds on the same finding end the loop.** When a finding survives two rounds of fixes, the model of the failure is wrong, not the patch — stop and hand the decision back. Report the root cause you can actually evidence, what each round changed and why it didn't hold, and the options: re-scope the change, switch approach (`dev-problem-solving`), or accept the behavior as a documented limitation. No third speculative round, and no quietly narrowing the finding until it passes.
+[Ponytail review](https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail-review/SKILL.md) informed connected-code inspection, expected-load reasoning, and evidence-backed findings. This workflow keeps review scope explicit and loads detailed checks only when relevant.

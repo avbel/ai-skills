@@ -1,6 +1,6 @@
 ---
 name: dev-testing
-description: Testing strategy for any project — integration tests first, in-memory databases, mock servers for external APIs with real-data verification, edge-case coverage. Use when writing tests, when the user asks "how should I test this", "add tests", or when finishing a feature without tests.
+description: Testing strategy for changed behavior — stable seams, real-engine fidelity, verified API mocks, and relevant edge cases. Use when writing tests, when the user asks "how should I test this", "add tests", or when finishing a feature without tests.
 ---
 
 # Testing Strategy
@@ -9,28 +9,25 @@ Bias toward **integration tests** — they verify what users actually experience
 
 This skill covers the **everyday suite** that runs on every `test` invocation. For the heavier production-parity tier — real brokers, local blockchains, real sockets, network-fault injection, run on demand rather than per commit — see `dev-e2e-testing`.
 
-## Default Test Plan for a Feature
+## Choose the Smallest Test That Proves the Contract
 
-1. **1–3 integration tests** through the real entry point (HTTP handler, CLI command, job runner) hitting a real-but-local database.
-2. **Edge-case tests** — see the checklist below.
-3. **Unit tests only** for isolated pure logic (parsers, calculators, matchers) where enumerating cases is cheap.
+- Reuse existing coverage if it already detects a regression in the changed behavior. Trivial edits need no new test.
+- For new nontrivial behavior or a bug fix, add a durable check at the cheapest stable seam: unit tests for pure logic, integration tests for storage/protocol contracts, E2E for cross-system behavior.
+- Test the requested result and relevant failure cases, not a test-count or coverage-percentage quota. For a bug fix, observe the check fail before the fix and pass after it; expected values come from an independent source.
+- Respect the requested test scope. Suggest a broader check only when the narrower one misses a concrete risk.
 
-Always *suggest* integration tests even when the user only asked for unit tests — one sentence, not a lecture. If they decline, respect it.
+## Databases: Match Fidelity to the Behavior
 
-## Databases: Run Real Engines Locally, Not Fakes
+Use the project's existing local harness when it proves the contract:
 
-Prefer, in order:
+- SQLite `:memory:` runs the real engine. `mongodb-memory-server` launches real MongoDB binaries; pin/configure the server and topology needed by the test.
+- PostgreSQL requires real PostgreSQL for migrations, SQL/type behavior, transactions, locks, and concurrency. Use managed local binaries or Testcontainers. `pg-mem` is an emulator: useful for fast limited checks, not proof of PostgreSQL semantics. Never alter production SQL to accommodate its gaps.
+- Redis/Valkey: prefer a disposable real server; use a mock only when a real engine cannot run and report the fidelity gap.
+- Other engines: local binaries or containers matching the relevant production version and features. Containers alone do not guarantee parity.
 
-1. **In-memory / embedded mode of the real engine** — zero infra, exact SQL dialect:
-   - PostgreSQL → `pg-mem` (Node, no server) or embedded binaries (`embedded-postgres` for Rust/Go/Java)
-   - SQLite → `:memory:`
-   - MongoDB → `mongodb-memory-server`
-   - Redis/Valkey → a real `valkey-server` in disposable mode (`--save '' --appendonly no`, `FLUSHALL` between tests) — it's a single static binary, so there's no reason to fake it. Reach for `ioredis-mock` only when no binary/container can run at all (e.g. a locked-down CI sandbox); it reimplements the command set and drifts from real engine behavior.
-   - ClickHouse / anything without an embedded mode → containers (next option)
-2. **Testcontainers** (`testcontainers` for Node/Rust/Go/Java/Python) — real engine in Docker, throwaway per suite. Heavier but 100% faithful; use when the in-memory shim diverges from the real dialect (e.g. `pg-mem` lacks some PG features — on the first unsupported-feature error, switch to testcontainers rather than dumbing down the SQL).
-3. **Never** mock the database driver call-by-call — those tests assert your own implementation, not behavior.
+Run real migrations. Use unique databases/schemas/key prefixes per worker. Destructive reset (`DROP`, `FLUSHALL`, volume deletion) is permitted only for resources created and owned by this test run; never infer ownership from a name like `test` or `localhost`. Do not mock driver calls to claim query correctness.
 
-Run migrations in test setup so the schema is the production schema.
+Sources: [pg-mem limitations](https://github.com/oguimbal/pg-mem#readme), [MongoDB binary harness](https://github.com/typegoose/mongodb-memory-server#readme).
 
 ## External APIs: Mock Server + Real-Data Verification
 
@@ -44,7 +41,7 @@ Use the existing client or HTTP boundary. Add a vendor adapter only when it cent
 
 **The critical step — verify mock fidelity.** A mock that drifts from the real API produces green tests and production failures. Before trusting mock data:
 
-1. **Capture a real response** once (curl the sandbox/real API, or copy a verbatim example from the vendor's current docs) and use it as the mock body. Do not hand-write response JSON from memory.
+1. **Capture a real response** once through an authorized read-only/sandbox operation, or use an example from the vendor's current docs and use it as the mock body. Redact credentials and personal data before saving. Do not perform live mutations to discover a fixture; if authoritative evidence is unavailable, state the gap rather than inventing the contract.
 2. **Diff against the vendor's published schema** (OpenAPI spec if available) — field names, nesting, types, nullability, pagination envelope.
 3. **Record where each mock body came from** once alongside the fixture, in metadata or a brief comment: `// captured from GET /v2/users 2026-07-12, api-version 2024-11`. Do not repeat provenance at every use.
 4. Mock the **failure shapes** too: the vendor's actual 429/5xx error body and headers (e.g. `Retry-After`), not an invented `{error: "oops"}`.
@@ -77,6 +74,7 @@ When reviewing (see `dev-review`), explicitly check the diff's tests against thi
 
 ## Keep the Suite Fast
 
-- In-memory engines + one shared container per suite (not per test).
+- Reuse setup within a suite while isolating state per test/worker. Preserve setup/test exit status through cleanup; cleanup success must not mask a failed test.
+- Run focused checks while iterating; after an edit rerun checks whose inputs changed. Run repository-required checks on the final state, then stop unless new evidence warrants more testing.
 - Parallel-safe tests: unique DB name/schema per worker, no shared global state.
 - If total test time exceeds a few minutes, split a fast default suite from a slower `integration`-tagged suite — but the fast suite must still include the critical integration paths.

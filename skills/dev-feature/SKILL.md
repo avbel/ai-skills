@@ -23,7 +23,7 @@ Look up facts and conventions in the code instead of asking; put obvious default
 
 ## Step 2 — Plan (one short in-chat message, then go)
 
-If `docs/knowledge/INDEX.md` exists, read it and open only the notes that match this task — a past lesson may cover the exact pitfall.
+Consult the configured memory store for task-relevant lessons. If markdown is the chosen store and `docs/knowledge/INDEX.md` exists, read its index and only matching notes; do not duplicate retrieval across stores.
 
 Present a compact plan and **proceed straight to implementation** — the plan is a courtesy heads-up the user can interrupt, not a gate to wait on (unless the user or their setup requires plan approval):
 
@@ -39,17 +39,18 @@ Keep it under ~10 lines: no alternatives-considered section, no risk matrix. Kee
 
 ## Step 3 — Implement, KISS
 
+- **Map the affected contract:** trace changed behavior through callers, exports, configuration, fixtures, and tests before picking the smallest implementation. Include necessary downstream updates; do not expand into unrelated cleanup.
 - **Explore cheaply:** locate code with targeted search and read the relevant ranges rather than whole files; batch independent searches and reads into one turn; don't re-read what is already in context.
 - **Use what fits already:** project utilities, standard-library/native features, and installed dependencies before custom code or a new package — chosen by required behavior and maintenance cost, not popularity or line count. Share code when meaning and ownership align; don't widen a private API or couple unrelated modules just to remove similar lines.
 - **Direct code first:** keep short, clear logic local. Add a helper, interface, or option only when it removes current complexity, centralizes a shared rule, or serves a real boundary; a single caller is neither a ban nor a reason to abstract. No speculative configuration, extension points, or pass-through layers.
 - **No silent scope cuts:** implement every part of the plan. If a part turns out harder than planned, or a `TODO`/stub is tempting — **stop and tell the user first**; never commit a placeholder or "not implemented" path the user hasn't approved. Approved leftovers go under "Deferred" in the final report.
 - **Out-of-project files are read-only:** paths outside the repo root are inputs, never targets — copy what you need into the project and adapt the copy. Editing outside the repo requires explicit user confirmation.
 - **Names over comments:** precise names and readable control flow, without dense one-liners; skip obvious comments and keep necessary rationale brief and beside the code. Preserve required docs, safety invariants, and directives.
-- **Tests:** follow the project's existing setup — usually 1–2 integration tests through the real entry point plus the edge cases that apply (empty or boundary input, duplicates, dependency failure). Take expected values from the spec, never recomputed by the code under test. Load `dev-testing` only when the project has no test pattern for this kind of code.
+- **Tests:** follow the project's existing setup — use the smallest stable seam that proves the changed behavior, plus relevant failure cases. Pure logic can use unit tests; storage/protocol contracts need integration checks. Reproduce bugs before fixing them, and keep a regression test. Existing coverage can suffice; do not add tests for trivial edits merely to meet a quota. Take expected values from the spec, never recomputed by the code under test. Load `dev-testing` only when the project has no test pattern for this kind of code.
 
 ## Step 4 — Finish
 
-- Check your changes — already in context, so skip a full diff dump; `git status --short` catches stray files — for unnecessary layers, speculative code, and comment narration. Simplify within scope without weakening the contract or the tests.
-- Iterate with focused tests; after a fix, rerun only what failed, then run the full test and lint commands once at the end. Keep output quiet (summary reporter or the failure tail) and give long commands enough timeout to finish in one call instead of polling. Fix what you broke. **Never delete, skip, weaken, or narrow a test to get green** — a test blocking you is a finding to raise with the user. No unrelated refactors, no dependencies beyond the plan.
+- Inspect the final scoped diff (including generated and agent-written changes) and `git status --short` for unnecessary layers, speculative code, and comment narration. Simplify within scope without weakening the contract or the tests.
+- Iterate with focused tests; after a fix, rerun the failed check and checks invalidated by the fix, then run required test and lint commands on the final state. Reuse results only while their inputs remain unchanged. Stop after acceptance and required checks pass; do not start another audit without new evidence. Keep output quiet (summary reporter or the failure tail) and give long commands enough timeout to finish in one call instead of polling. Fix what you broke. **Never delete, skip, weaken, or narrow a test to get green** — a test blocking you is a finding to raise with the user. No unrelated refactors, no dependencies beyond the plan.
 - Report in a few sentences: what changed, where, test results, and any "Deferred" items. **Do not** generate `SUMMARY.md`, `CHANGES.md`, or any doc file unless asked.
-- End by offering `dev-review` in one line instead of running it. Capture a `dev-knowledge` note only when a non-obvious pitfall surprised you.
+- State material verification gaps; never present skipped checks as passes. Capture a `dev-knowledge` note only when a non-obvious pitfall surprised you and the project permits capture. No automatic review offer or extra workflow after completion.

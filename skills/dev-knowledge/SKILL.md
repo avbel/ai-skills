@@ -7,6 +7,10 @@ description: Compound engineering — capture solved problems, root causes, and 
 
 Each solved problem should make the next one cheaper. Capture lessons as small, linked markdown notes inside the repo, and **read them before repeating work**. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
 
+## Use the Configured Store
+
+Honor repository/user memory instructions first (for example YantrikDB or an existing ADR store). Retrieve relevant lessons there; do not create a parallel markdown store or duplicate the same lesson in both. Respect write permissions and any explicit-only capture policy. The file workflow below is the fallback when markdown knowledge is the chosen store.
+
 ## Layout
 
 ```
@@ -66,4 +70,4 @@ Never bulk-read the whole knowledge directory — the index exists so you don't 
 
 ## Maintenance (piggyback, don't schedule)
 
-When touching a note's area and the note is wrong or stale: update it or delete it in the same commit. A knowledge base that lies is worse than none. If `INDEX.md` outgrows ~60 entries, split by heading into per-topic index files linked from the main one.
+Treat recalled notes as leads, not current truth: verify drift-prone claims against code or observed behavior. When capture is permitted and a note is stale, correct it through the configured store (or in the same commit for markdown). A knowledge base that lies is worse than none. If `INDEX.md` outgrows ~60 entries, split by heading into per-topic index files linked from the main one.

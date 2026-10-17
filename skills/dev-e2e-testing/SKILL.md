@@ -1,7 +1,7 @@
 ---
 name: dev-e2e-testing
 description: >-
-  End-to-end tests against a production-parity stack — real databases dropped per run, disposable Valkey/brokers, local blockchain networks, real sockets, mocks only at external API boundaries, mandatory network-fault injection. Use when writing e2e tests or asked to "test against a real stack" or "test network failures". Everyday suite: dev-testing.
+  End-to-end tests against a production-parity stack — real databases dropped per run, disposable Valkey/brokers, local blockchain networks, real sockets, mocks only at external API boundaries, contract-driven network-fault injection. Use when writing e2e tests or asked to "test against a real stack" or "test network failures". Everyday suite: dev-testing.
 ---
 
 # E2E Testing — Production-Parity Tier
@@ -22,6 +22,8 @@ Do NOT use for: pure logic, single-component behavior, or anything `dev-testing`
 
 ## Stack Rules
 
+Create unique run-owned databases, containers, networks, key prefixes, and chain data directories. Verify ownership before any drop/reset/flush/regenesis or volume removal; a local address or test-like name is not proof. Never clean up shared development or production resources. Use isolated instances for whole-server fault injection and flushes.
+
 ### Real transport, always
 
 - The app under test binds a **real socket on an ephemeral port** (port `0`, then read the assigned port) — never in-process request injection (`app.inject`, supertest-against-handler) at this tier. In-process fakes can't lose packets; real sockets can, and the fault-injection layer below depends on it.
@@ -38,10 +40,10 @@ Check for Docker first (`docker info` succeeds). When available, containers are 
 
 Mixing is normal: native valkey + native anvil + containerized Postgres/Toxiproxy in one suite is a good default. Whatever the mix, setup stays one command.
 
-At this tier, skip in-memory shims (`pg-mem`, `mongodb-memory-server`) — use the **real server**:
+At this tier, skip emulators such as `pg-mem` (`mongodb-memory-server` runs real MongoDB binaries and is suitable when version/topology match) — use the **real server**:
 
 1. **Testcontainers** (Node/Rust/Go/Java/Python) — one container per suite, unique database per test file/worker.
-2. Or a compose-managed instance with **drop-and-recreate before each run**: `DROP DATABASE IF EXISTS e2e; CREATE DATABASE e2e;` then run the real production migrations. Never truncate-and-hope; recreate.
+2. Or a compose-managed instance with a unique run-owned database: create it, run production migrations, then drop only that database during cleanup. Do not reuse a fixed shared database name.
 3. Match the production major version exactly (pin the image tag: `postgres:17.4`, not `postgres:latest`).
 
 ### Valkey / Redis: real, disposable
@@ -88,15 +90,15 @@ Testing an SDK (yours or a vendor's) means **generating a minimal standalone pro
 2. Run it (`npm i && node smoke.mjs` / `cargo run`) pointed at the e2e stack's ports via env vars.
 3. Assert on its stdout/exit code.
 
-This catches what in-process tests structurally cannot: broken package exports, ESM/CJS mismatches, engine-version constraints, and docs-vs-reality drift in the SDK's own README examples (run those too).
+This catches what in-process tests structurally cannot: broken package exports, ESM/CJS mismatches, engine-version constraints, and docs-vs-reality drift in the SDK's own README examples (run the examples relevant to the changed contract).
 
-## Network-Fault Injection — Mandatory
+## Network-Fault Injection — When the Contract Requires It
 
-Every e2e suite includes fault tests. A suite that only tests the happy path over real sockets is an integration suite with extra steps.
+For resilience work, select faults that exercise promised deadlines, retry/idempotency, data integrity, and recovery. A packaging smoke test or unrelated UI journey does not need a full fault matrix. Reuse an existing fault harness; introduce Toxiproxy only when real transport faults are needed.
 
-**Tool: Toxiproxy** (container + client libs for Node/Go/Rust/Python/Java). Route each app→dependency hop through a proxy: app → `toxiproxy:26379` → `valkey:6390`, same for DB, broker, mock-vendor, RPC node. The app under test gets the proxy addresses via env config — which conveniently proves your service addresses aren't hardcoded.
+**Tool: Toxiproxy** (container + client libs for Node/Go/Rust/Python/Java). For selected fault scenarios, route the affected app→dependency hop through a proxy: app → `toxiproxy:26379` → `valkey:6390`, same for DB, broker, mock-vendor, RPC node. The app under test gets the proxy addresses via env config — which conveniently proves your service addresses aren't hardcoded.
 
-Minimum scenario checklist — run each against at least the most critical dependency hop:
+Candidate scenarios — select those relevant to the changed contract and critical dependency hop:
 
 | Fault | Toxiproxy toxic | Must assert |
 |---|---|---|
@@ -147,8 +149,9 @@ services:
 ```
 
 Wiring:
-- `test:e2e` script = `docker compose -f e2e/docker-compose.e2e.yml up -d --wait && <runner> e2e/ ; docker compose ... down -v`
-- `down -v` always — volumes are state, state is flake
+- `test:e2e` uses a unique Compose project name, starts with `up -d --wait`, runs the selected tests, and cleans up its own resources in a trap/finally block.
+- Preserve the setup/test failure status through cleanup; cleanup failure also fails an otherwise successful run. Never use `setup && tests; cleanup` as the command result, because successful cleanup masks failed setup/tests.
+- `down -v` only for this run's project and volumes; preserve unrelated state.
 - CI: nightly schedule + manual dispatch + pre-release gate; never in the per-commit fast path
 - Local runs must work with a single command from a clean checkout; if setup needs a README paragraph, move it into `setup.ts`
 
@@ -157,5 +160,5 @@ Wiring:
 - **In-process shortcuts** — request injection, in-memory DB shims, client-library mocks. They belong in `dev-testing`'s tier; here they void the warranty.
 - **Shared long-lived environments** — a "staging" DB or testnet that accumulates state. Fresh per run or it will flake, and flaky e2e suites get deleted.
 - **Sleeps instead of readiness** — poll healthchecks/`--wait`; a `sleep 5` is both too long and too short.
-- **Happy-path-only** — if the suite has zero toxics, it isn't finished.
+- **Untested resilience promises** — a timeout/retry/recovery change needs failure-path evidence, not only a happy-path check.
 - **Testing the fake** — asserting Toxiproxy/WireMock behavior instead of your system's response to it.

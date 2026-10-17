@@ -10,7 +10,7 @@ Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
 
 ## Before Adding Code
 
-Read the affected flow and its callers, then choose the simplest implementation that meets the actual contract:
+Read the affected flow and its callers, including consumers of changed return values, errors, and side effects. Check whether configuration or an existing capability already meets the request; do not remove requested behavior as a shortcut. Then choose the simplest implementation that meets the actual contract:
 
 1. Reuse suitable code already in the project when its semantics and module boundary fit.
 2. Prefer standard-library or native platform capabilities when they cover the required behavior.
@@ -37,7 +37,7 @@ Preserve requested behavior, validation at trust boundaries, necessary error han
 
 Default to no comments for obvious code. There is no comment quota or comment-to-code ratio. First try a clearer name or simpler flow; if important context remains, keep the shortest sufficient comment beside the affected code, usually one sentence.
 
-Keep comments for non-obvious reasons, external constraints, intentional surprises, and invariants a later edit could break. For example, `// Keep the lock through publish: consumers can read immediately.` explains an ordering requirement; `// publish the event` only narrates a call. Explain a necessary workaround or known limit where it matters, with a source/issue link when useful.
+Keep comments for non-obvious reasons, external constraints, intentional surprises, and invariants a later edit could break. For example, `// Keep the lock through publish: consumers can read immediately.` explains an ordering requirement; `// publish the event` only narrates a call. Explain a necessary workaround or known limit where it matters, with a source/issue link when useful. For an accepted limit, name the condition that would require revisiting it (for example, multiple workers or input beyond a measured bound). A comment does not authorize deferring a requirement or weakening a safeguard.
 
 Preserve required API documentation, license headers, tooling directives, and safety rationale (including unsafe-code invariants). Document public contracts the signature cannot convey, such as units, errors, ownership, and side effects; follow ecosystem requirements without filling obvious private helpers with doc templates. Correctness may require more than one sentence.
 
