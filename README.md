@@ -33,6 +33,14 @@ Install all skills from this repo:
 pnpm dlx skills add avbel/ai-skills --all
 ```
 
+Install all skills globally for a specific agent (example: Codex):
+
+```bash
+npx skills add avbel/ai-skills --global --agent codex --skill '*'
+```
+
+Avoid combining `--all` with `--global`: `--all` targets every agent, including project-only Eve and PromptScript, and current `skills` CLI versions report those unsupported global targets as per-skill failures. This is an [upstream CLI issue](https://github.com/vercel-labs/skills/issues/1496); the failures do not necessarily mean installs to supported agents failed. For multiple global agents, name supported agent IDs explicitly with `--agent` instead of `--all`. Install project-only agents from the project directory without `--global`.
+
 List available skills:
 
 ```bash
