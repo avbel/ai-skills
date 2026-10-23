@@ -89,9 +89,8 @@ This doc is the only document produced — the implementation itself follows `de
 
 Before implementing, review the build plan — plans are cheapest to fix now:
 
-1. **Second opinion when available:** pass the doc to the `claude-review-code` skill with "find holes in this plan: missed cases, ordering problems, hidden risks, simpler alternatives".
-2. **Self-review otherwise**, adversarially: What breaks mid-rollout if we stop after step 2? What does this assume about load/data shape that nobody verified? Which step is secretly two steps? Which helper, interface, option, or dependency can be omitted without weakening the chosen solution?
-3. Fold findings into the doc, show the user the delta, get the go-ahead.
+1. **Self-review adversarially:** What breaks mid-rollout if we stop after step 2? What does this assume about load/data shape that nobody verified? Which step is secretly two steps? Which helper, interface, option, or dependency can be omitted without weakening the chosen solution?
+2. Fold findings into the doc, show the user the delta, get the go-ahead.
 
 ## Phase 5 — Build (parallelize where the plan allows)
 

@@ -104,11 +104,7 @@ Do not reorder or reformat other rows when inserting.
 
 Skills are prescriptive, so a flawed `SKILL.md` spreads bad practice across every project that installs it. The session that drafted the skill shares blind spots with its author; a reviewer that sees only the finished skill catches issues the drafter cannot.
 
-After committing the `SKILL.md` and the README row, request a review of the new skill from a fresh Claude Code session. The `claude-review-code` skill does this non-interactively:
-
-```bash
-bash skills/claude-review-code/scripts/review.sh
-```
+After committing the `SKILL.md` and the README row, request a review of the new skill from a fresh session that sees only the finished skill, for example a new Claude Code session running `dev-review` on that commit.
 
 The review should answer: is the skill accurate, is it actionable, are the prescriptions justified, does it conflict with existing skills in the same ecosystem? Address the feedback or document why it was rejected, then merge.
 

@@ -183,7 +183,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 
 ### Development Cycle
 
-Cross-language workflow skills sharing one philosophy: cheapest sufficient process, compact readable code, justified abstractions, purposeful comments, second opinions, compounding knowledge. Start with `dev-cycle`.
+Cross-language workflow skills sharing one philosophy: cheapest sufficient process, compact readable code, justified abstractions, purposeful comments, compounding knowledge. Start with `dev-cycle`.
 
 | Skill | Covers |
 |-------|--------|
@@ -202,7 +202,6 @@ Cross-language workflow skills sharing one philosophy: cheapest sufficient proce
 
 | Skill | Covers |
 |-------|--------|
-| `claude-review-code` | Delegate a local git code review to Claude Code (`claude`, Opus/xhigh) |
 
 ### CI / DevOps
 
