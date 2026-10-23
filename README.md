@@ -202,7 +202,6 @@ Cross-language workflow skills sharing one philosophy: cheapest sufficient proce
 
 | Skill | Covers |
 |-------|--------|
-| `code-review` | Production-focused reviews: observability, compat, migrations, idempotency, PR quality |
 | `claude-review-code` | Delegate a local git code review to Claude Code (`claude`, Opus/xhigh) |
 
 ### CI / DevOps
