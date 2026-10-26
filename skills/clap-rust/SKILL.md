@@ -242,14 +242,14 @@ fn parses_serve_port() {
 
 ## Helper Script
 
-Generate starter snippets without loading extra context:
+Generate starter snippets without loading extra context. Paths are relative to this skill's directory:
 
 ```bash
-bash /mnt/skills/user/clap-rust/scripts/clap-rust-bootstrap.sh derive
-bash /mnt/skills/user/clap-rust/scripts/clap-rust-bootstrap.sh builder
-bash /mnt/skills/user/clap-rust/scripts/clap-rust-bootstrap.sh subcommand
-bash /mnt/skills/user/clap-rust/scripts/clap-rust-bootstrap.sh value-enum
-bash /mnt/skills/user/clap-rust/scripts/clap-rust-bootstrap.sh test
+bash scripts/clap-rust-bootstrap.sh derive
+bash scripts/clap-rust-bootstrap.sh builder
+bash scripts/clap-rust-bootstrap.sh subcommand
+bash scripts/clap-rust-bootstrap.sh value-enum
+bash scripts/clap-rust-bootstrap.sh test
 ```
 
 The script prints JSON with a `scenario`, `cargo`, and `snippet` field.
