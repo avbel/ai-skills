@@ -5,7 +5,7 @@ description: Router and shared philosophy for the dev-* development-cycle skill 
 
 # Development Cycle — Router
 
-Pick **one primary workflow** per task and follow it. Load supporting skills only when needed; `dev-code-style` supplies the shared code and comment guidance for implementation and review.
+Pick **one primary workflow** per task from the table below, load that skill before starting the work (the Skill tool in Claude Code; read its `SKILL.md` elsewhere), and follow it — this router is not a workflow by itself. Choose from the table; do not open other workflow skills to compare them. Load supporting skills only when needed; `dev-code-style` supplies the shared code and comment guidance for implementation and review.
 
 ## Routing
 
