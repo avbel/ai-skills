@@ -140,7 +140,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `rust-cookbook` | Task-to-crate recipe index: random, async, CLI, compression, db, regex, HTTP |
 | `rust-macros` | macro_rules! fragments/repetitions/hygiene, TT munchers, proc macros (syn/quote) |
 | `rust-high-assurance` | Static/dynamic/operational assurance, threat modeling, unsafe discipline, supply-chain, fuzzing |
-| `rust-high-performance` | Build config, allocators, type sizes, hashers, hot-path I/O, rayon, profiling |
+| `rust-high-performance` | Build config, allocators, inlining, layout, SIMD, locks, tokio |
 | `power-rust` | Prompt patterns that reduce LLM Rust bugs (versions, cancel-safety, SAFETY) |
 
 ### JavaScript / TypeScript — libs & tools
