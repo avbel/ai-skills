@@ -18,7 +18,7 @@ pub fn count(m: &mut HashMap<String, u32>, k: String) {
 ```
 
 **Caveat**: `entry` takes the key by value, so with `String` keys it allocates even when the entry exists. For hot borrowed lookups either accept the double hash (`get_mut` first, `insert` on miss) or use `hashbrown::HashMap::entry_ref(&borrowed)`, which allocates the owned key only on insert.
-**Hashers**: the default SipHash 1-3 is DoS-resistant but slow for short and integer keys. If hashing is hot and HashDoS is not a concern: `rustc_hash::FxHashMap` (integer keys; rustc saw 4-84 % slowdowns going back to the default), `foldhash` (hashbrown's default), `ahash` (AES-based; still maintained but slower-moving). Try more than one; the win is program-specific. Ban the default `HashMap` with Clippy `disallowed-types` once you standardize.
+**Hashers**: the default SipHash 1-3 is DoS-resistant but slow for short and integer keys. If hashing is hot and HashDoS is not a concern: `rustc_hash::FxHashMap` (integer keys; rustc saw 4-84 % slowdowns going back to the default), `foldhash` (hashbrown's default), `ahash` (AES-based; still maintained but slower-moving). Try more than one; the win is program-specific. Ban the default `HashMap` with Clippy `disallowed-types` only in crates that never hash attacker-controlled keys (request data, user ids from the network); keep `RandomState` for externally keyed maps.
 
 ```rust
 use rustc_hash::FxHashMap;
@@ -50,7 +50,7 @@ pub fn sort_ci(v: &mut [String]) {
 }
 ```
 
-**Facts**: Rust 1.81 replaced both algorithms (driftsort stable, ipnsort unstable) and both **may panic on an inconsistent `Ord`** (e.g. NaN through `partial_cmp().unwrap()`) instead of returning garbage. The stable/unstable gap narrowed in 1.81; benchmark on your data.
+**Facts**: Rust 1.81 replaced both algorithms (driftsort stable, ipnsort unstable) and both **may panic on an inconsistent `Ord`** (e.g. `partial_cmp(b).unwrap_or(Equal)` with NaNs present; a plain `partial_cmp().unwrap()` panics at the `unwrap` first) instead of returning garbage. The stable/unstable gap narrowed in 1.81; benchmark on your data.
 Source: https://blog.rust-lang.org/2024/09/05/Rust-1.81.0/
 
 ## B3. `memchr` / `bstr` for byte search
@@ -108,7 +108,7 @@ Covered with measurements in memory-layout.md A3. Short form: hold one `String` 
 
 ## B6. Overflow checks and explicit arithmetic intent
 
-**Rule**: release has `overflow-checks = false`, dev has `true`. Make intent explicit where data-derived math happens: `checked_*` / `saturating_*` for untrusted lengths and offsets, `wrapping_*` only for hashes, checksums and PRNGs where wrapping is the intent (same codegen in both profiles, no debug panic); never as a way to silence real overflow. Do not enable `overflow-checks` in a hot release profile without measuring; it blocks vectorization.
+**Rule**: release has `overflow-checks = false`, dev has `true`. Make intent explicit where data-derived math happens: `checked_*` / `saturating_*` for untrusted lengths and offsets, `wrapping_*` only for hashes, checksums and PRNGs where wrapping is the intent (same codegen in both profiles, no debug panic); never as a way to silence real overflow. Checked arithmetic blocks vectorization, but if the project enables `overflow-checks` in release (see `rust-high-assurance`), keep them: widen the accumulator or validate ranges once outside the hot loop instead.
 **Detect**: untrusted `a + b` or `as usize` casts used for indexing or allocation; hashing code written with plain `*`/`+` (panics in debug).
 Source: https://nnethercote.github.io/perf-book/build-configuration.html · https://doc.rust-lang.org/cargo/reference/profiles.html
 
@@ -214,14 +214,14 @@ pub fn header(mut rest: &[u8]) -> Option<(&[u8], &[u8])> {
     Some((hdr, rest))
 }
 
-pub fn add_into(v: &mut [u32], i: usize, j: usize) {
-    if let Ok([a, b]) = v.get_disjoint_mut([i, j]) {
-        *a += *b;
-    }
+pub fn add_into(v: &mut [u32], i: usize, j: usize) -> Result<(), std::slice::GetDisjointMutError> {
+    let [a, b] = v.get_disjoint_mut([i, j])?;
+    *a += *b;
+    Ok(())
 }
 ```
 
-`HashMap::get_disjoint_mut([&k1, &k2])` returns `[Option<&mut V>; 2]`. `split_first_chunk`/`split_last_chunk` (1.77) read fixed-size headers without `try_into`. `as_array` (1.93) views a slice as `&[T; N]`.
+The slice version returns `Err` on overlapping or out-of-range indices; handle it rather than ignoring it. `HashMap::get_disjoint_mut([&k1, &k2])` returns `[Option<&mut V>; 2]` and **panics on duplicate keys** (O(n²) check): test `k1 != k2` first. `split_first_chunk`/`split_last_chunk` (1.77) read fixed-size headers without `try_into`. `as_array` (1.93) views a slice as `&[T; N]`.
 Source: https://github.com/rust-lang/rust/blob/master/RELEASES.md (1.86, 1.87, 1.93)
 
 ## B11. `Rc<RefCell<T>>` graphs -> indices

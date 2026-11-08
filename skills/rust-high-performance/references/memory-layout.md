@@ -215,7 +215,7 @@ pub fn push_doubled(out: &mut Vec<u64>, xs: &[u32]) {
 }
 ```
 
-**[measured]** `(0..100).collect::<Vec<u32>>()` = 1 allocation. `src.into_iter().map(|x| x + 1).collect::<Vec<u32>>()` = 0 allocations and the same pointer: std often reuses the source allocation when element layouts are compatible (observed, not a documented guarantee). `iter().map().collect()` over a borrowed `Vec` always allocates. `filter` has lower-bound `size_hint` 0, so call `reserve` yourself when you know the bound. Perf Book: `chain` can be slower than one iterator; `filter_map` over `filter` + `map`; `chunks_exact` over `chunks`.
+**[measured]** `(0..100).collect::<Vec<u32>>()` = 1 allocation. `src.into_iter().map(|x| x + 1).collect::<Vec<u32>>()` = 0 allocations and the same pointer: std often reuses the source allocation when element layouts are compatible (observed, not a documented guarantee). The std `FromIterator for Vec` docs warn this can extend the lifetime of a large allocation and raise memory use; `shrink_to_fit` or collect into `Box<[T]>` when the output is much smaller than the input. `iter().map().collect()` over a borrowed `Vec` always allocates. `filter` has lower-bound `size_hint` 0, so call `reserve` yourself when you know the bound. Perf Book: `chain` can be slower than one iterator; `filter_map` over `filter` + `map`; `chunks_exact` over `chunks`.
 Source: PERF-ITER
 
 ## A11. `ThinVec` for usually-empty vectors in hot types
@@ -374,7 +374,7 @@ pub enum Tok8 {
 ```
 
 **[measured]** 24 / 16 / 8 bytes.
-`repr` facts **[measured + Reference]**: a fieldless enum with <= 256 variants is already 1 byte by default; `repr(C)` makes it 4 (C `int`). For enums with fields `repr(u8)` fixes the layout as a union of `repr(C)` structs starting with the tag; `repr(u8) R8 { A(u32), B(u8) }` is 8 bytes, same as the default. The Reference's `repr(C) EnumC { V0(u8), V1 }` is 8 vs `repr(C, u8)` 2 (reproduced). **Use `repr(u8)`/`repr(C, u8)` to shrink an enum that must be C-like; it never shrinks a default `repr(Rust)` enum**, and it removes the compiler's freedom.
+`repr` facts **[measured + Reference]**: a fieldless enum with <= 256 variants is already 1 byte by default; `repr(C)` makes it 4 (C `int`). For enums with fields `repr(u8)` fixes the layout as a union of `repr(C)` structs starting with the tag; `repr(u8) R8 { A(u32), B(u8) }` is 8 bytes, same as the default. The Reference's `repr(C) EnumC { V0(u8), V1 }` is 8 vs `repr(C, u8)` 2 (reproduced). **Use `repr(u8)`/`repr(C, u8)` to shrink an enum that must be C-like; it never shrinks a default `repr(Rust)` enum**, and on data-carrying enums it disables niche filling, so it can grow them (measured: `enum { A(&u8), B }` 8 → 16 B, `enum { A(String), B(u32) }` 24 → 32 B).
 Sources: REF-LAYOUT (primitive representations) · PERF-SIZE
 
 ## B5. Smaller integers and `NonZero`

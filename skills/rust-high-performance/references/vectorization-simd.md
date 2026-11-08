@@ -104,7 +104,7 @@ Source: https://matklad.github.io/2023/04/09/can-you-trust-a-compiler-to-optimiz
 
 ## Integer reductions vectorize; float reductions need help
 
-Integers: `iter().sum()`, `fold` with `wrapping_*`, `min`/`max` vectorize at `opt-level` 2/3 (`s` vectorizes with smaller unroll; `z` does not). Floats: IEEE addition is not associative, so `s += x` is one serial dependency chain (latency-bound, roughly one add per 3-4 cycles) and LLVM will not reorder it.
+Integers: `iter().sum()`, `fold` with `wrapping_*`, `min`/`max` vectorize at `opt-level` 2/3, not at `s`/`z`; multi-accumulator (SLP) patterns such as `sum8` below need `opt-level = 3`. Floats: IEEE addition is not associative, so `s += x` is one serial dependency chain (latency-bound, roughly one add per 3-4 cycles) and LLVM will not reorder it.
 **Detect**: `f32`/`f64` `sum()`, dot products, norms, `+=` accumulators; asm shows `addss`/`addsd` instead of `vaddps`.
 
 ### Option A: algebraic float ops (1.98)
@@ -117,7 +117,7 @@ pub fn sum_algebraic(a: &[f32]) -> f32 {
 }
 ```
 
-orlp measured naive 5.5 GB/s vs algebraic 118.6 GB/s (about 20x, 100k floats in cache, one machine) and *better* accuracy, because reordering approximates pairwise summation. For controlled error, algebraic-sum 256-element blocks and combine with Kahan using plain ops (algebraic ops would simplify the compensation to zero):
+orlp measured naive 5.5 GB/s vs algebraic 118.6 GB/s (about 20x, 100k floats in cache, `-C target-cpu=native` with AVX2 on a Threadripper 2950X; the default SSE2 baseline halves the vector width) and *better* accuracy, because reordering approximates pairwise summation. For controlled error, algebraic-sum 256-element blocks and combine with Kahan using plain ops (algebraic ops would simplify the compensation to zero):
 
 ```rust
 fn sum_block(a: &[f32]) -> f32 {
@@ -166,7 +166,11 @@ The result differs from the serial sum (different association) but is identical 
 ```rust
 pub fn threshold(out: &mut [i32], inp: &[i32], t: i32) {
     for (o, &x) in out.iter_mut().zip(inp) {
-        *o = if x > t { x } else { 0 };
+        *o = if x > t {
+            x
+        } else {
+            0
+        };
     }
 }
 
@@ -187,7 +191,7 @@ Source: matklad (above)
 
 - Default x86_64 baseline is SSE2. `-C target-cpu=native` or a level (`x86-64-v2` = SSE4.2, `x86-64-v3` = AVX2+FMA+BMI2, `x86-64-v4` = AVX-512) unlocks wider vectors; `rustc --print target-cpus` lists names, `rustc --print cfg -C target-cpu=native` shows what you got. A `native` binary SIGILLs on older CPUs; pin a level or dispatch at runtime for anything distributed.
 - AVX-512: on pre-Ice-Lake Intel it downclocks all cores, and LLVM may emit slow gather/scatter when auto-vectorizing for it (reports of 1.75x slower on Intel, 4x on AMD: llvm/llvm-project#70259, #91370). Benchmark `x86-64-v3` against `v4`/native.
-- Keep `overflow-checks` and `debug-assertions` off in release for numeric kernels, or use `wrapping_*`.
+- Release has `overflow-checks` off by default. If the project enables them (see `rust-high-assurance`), keep them: widen the accumulator or validate ranges outside the loop. `wrapping_*` only where wrapping is the intended semantics.
 Sources: https://nnethercote.github.io/perf-book/build-configuration.html · https://shnatsel.github.io/state-of-simd-rust-2026/
 
 ## Explicit SIMD landscape (crates.io, 2026-11)

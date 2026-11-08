@@ -37,7 +37,7 @@ Source: https://mara.nl/atomics/atomics.html (ch. 2)
 
 **Rule**: counters -> `Relaxed`; publish-then-read -> `Release` store, `Acquire` load (`AcqRel` for RMW); `SeqCst` only for a single global order across several atomics (rare).
 **Detect**: `SeqCst` everywhere with no comment; a `Mutex` used as a fence for a flag.
-**Facts** (Rust Atomics and Locks ch. 7): on x86-64 every load/store already has acquire/release semantics; `SeqCst` costs extra only on stores (`xchg` vs `mov`) and fences; `fetch_add` is `lock add` for all orderings. On ARM64 (including Apple Silicon) `Acquire`/`Release`/`AcqRel` cost the same as `SeqCst` (`ldar`/`stlr`) but `Relaxed` is cheaper (`ldr`/`str`). Corollary: wrong `Relaxed` code often works on x86 and breaks on ARM; test there and model-check with `loom` (0.7).
+**Facts** (Rust Atomics and Locks ch. 7): on x86-64 every load/store already has acquire/release semantics; `SeqCst` costs extra only on stores (`xchg` vs `mov`) and fences; `fetch_add` is `lock add` for all orderings. On ARM64, `Relaxed` is plain `ldr`/`str`. On baseline ARMv8.0 `Acquire` and `SeqCst` loads are both `ldar`; with RCpc (ARMv8.3+, all Apple Silicon) `Acquire` loads become the cheaper `ldapr` and RMWs use `ldadd` vs `ldaddal` for `SeqCst`. Corollary: wrong `Relaxed` code often works on x86 and breaks on ARM; test there and model-check with `loom` (0.7).
 Source: https://mara.nl/atomics/memory-ordering.html · https://mara.nl/atomics/hardware.html
 
 ## A3. Native RMW instead of a CAS loop; `Atomic*::update` (1.95)
@@ -52,12 +52,12 @@ pub fn inc(c: &AtomicU32) {
     c.fetch_add(1, Ordering::Relaxed);
 }
 
-pub fn saturating_inc(c: &AtomicU32) {
-    c.update(Ordering::Relaxed, Ordering::Relaxed, |x| x.saturating_add(1));
+pub fn saturating_inc(c: &AtomicU32) -> bool {
+    c.try_update(Ordering::Relaxed, Ordering::Relaxed, |x| x.checked_add(1)).is_ok()
 }
 ```
 
-**Why**: x86-64 and ARMv8.1+ have single-instruction atomic add; "a load can be significantly cheaper than a failed compare-and-exchange" because the latter demands exclusive access to the cache line. For a CAS-based flag, load first and CAS only when it looks free (test-and-test-and-set).
+**Why**: x86-64 and ARMv8.1+ (LSE) have single-instruction atomic add (on default aarch64 Linux targets `fetch_add` is an outlined `__aarch64_ldadd*` call that picks LSE at runtime unless you build with `+lse` or a `target-cpu`); "a load can be significantly cheaper than a failed compare-and-exchange" because the latter demands exclusive access to the cache line. For a CAS-based flag, load first and CAS only when it looks free (test-and-test-and-set).
 Source: https://mara.nl/atomics/hardware.html (Summary)
 
 ## A4. False sharing

@@ -24,12 +24,13 @@ Profile to find the hot spot, change one thing, re-measure. Effects (especially 
 - **Benchmark**: `Criterion` or `Divan` (`divan-rust` skill) in-process; `hyperfine` for whole-program wall time; Bencher/CI for regression tracking. Instruction counts (Cachegrind) vary less than wall time. Criterion and Divan black-box the closure's return value and their generated/parameterized inputs; wrap literals and captured inputs you pass yourself in `black_box`.
 - **Profile CPU**: `samply`, `perf`, `cargo flamegraph`, `hotpath-rust` skill. `perf stat -e cycles,instructions,branch-misses` confirms a branch-misprediction theory before you reach for `select_unpredictable`.
 - **Profile heap**: DHAT (valgrind) or the `dhat` crate (also heap-usage assertions in tests), `heaptrack`, `bytehound`. A hot `malloc`/`free` frame is the signal for the allocation checklist.
-- **Read the asm**: `cargo install cargo-show-asm`; `cargo asm --lib --rust path::to::fn` interleaves source, `--mca` runs llvm-mca, `--callers-of panic_bounds_check` lists functions with live bounds checks. Tiny functions vanish from the output since 1.75 (inlined away): add a `pub #[inline(never)]` probe wrapper in a bench or example.
+- **Read the asm**: `cargo install cargo-show-asm`; `cargo asm --lib --rust path::to::fn` interleaves source, `--mca` runs llvm-mca, `--callers-of panic_bounds_check` lists functions with live bounds checks. Tiny functions vanish from the output since 1.75 (inlined away): add an `#[inline(never)] pub fn` probe wrapper in a bench or example.
 - **Tokio stalls**: `hud-tokio-profiler` skill, tokio-console, `RuntimeMetrics`.
 
 ```toml
-[profile.release]
-debug = true   # line tables for profilers; does not slow the binary
+[profile.profiling]
+inherits = "release"
+debug = "line-tables-only"   # enough for profilers; does not slow the binary
 ```
 
 ## Build configuration (no code change)
@@ -46,7 +47,7 @@ panic = "abort"     # NOT free: any panic aborts the process (see below)
 - **PGO**: `cargo-pgo` — instrument, run representative workloads, rebuild. Worth it for CPU-bound programs (10 %+ reported).
 - **Release vs dev**: evaluate inlining and vectorization only in release with `incremental = false`; incremental builds disable cross-crate inlining inference.
 
-**Recipes**: max speed → `codegen-units = 1`, `lto = "fat"`, alternative allocator, `panic = "abort"` (if panics are fatal anyway), `target-cpu` or dispatch. Min size → `opt-level = "z"` (or `"s"`; `s` still vectorizes loops, `z` does not), `strip = "symbols"`; inspect with `cargo bloat`/`twiggy`.
+**Recipes**: max speed → `codegen-units = 1`, `lto = "fat"`, alternative allocator, `panic = "abort"` (if panics are fatal anyway), `target-cpu` or dispatch. Min size → `opt-level = "z"` (or `"s"`; both `s` and `z` disable LLVM's loop and SLP vectorizers, so size profiles give up auto-SIMD), `strip = "symbols"`; inspect with `cargo bloat`/`twiggy`.
 
 ### Alternative allocators
 
@@ -96,7 +97,7 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 | `"literal".to_string()` in some branches, `format!` in others | `Cow<'static, str>` (same 24 B as `String`) |
 | Millions of tiny objects that die together (AST, per-request, per-frame) | Arena (`bumpalo` 3.20; `Drop` is not run, keep data POD or use `bumpalo::boxed::Box`) |
 | `let x = self.buf.clone(); self.buf.clear();` or `.clone()` only to satisfy the borrow checker | `mem::take` / `mem::replace` / `mem::swap` / `Option::take` |
-| `.collect::<Vec<_>>()` immediately iterated again; `v.append(&mut xs.collect())` | Return `impl Iterator`; `extend` the existing collection; `into_iter().map().collect()` often reuses the source allocation (observed, not guaranteed) |
+| `.collect::<Vec<_>>()` immediately iterated again; `v.append(&mut xs.collect())` | Return `impl Iterator`; `extend` the existing collection; `into_iter().map().collect()` often reuses the source allocation (observed, not guaranteed; it can keep a large buffer alive, so `shrink_to_fit` or collect into `Box<[T]>` when the result is much smaller) |
 | `Box::new([0u8; N])` overflowing the stack (debug builds only; `-O` turns it into `calloc`) | `vec![0u8; n].into_boxed_slice()` (safe, one zeroed allocation); `new_zeroed_slice` (1.92) + `unsafe assume_init` only for `Rc`/`Arc` or non-`Vec` cases |
 
 ### 3. Layout — `references/memory-layout.md` Part B, C
@@ -109,7 +110,7 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 | `Option<u32>` / `Option<usize>` index fields; `u32::MAX` sentinels | `Option<NonZeroU32>` is 4 B vs 8 B; store index+1 or `nonmax::NonMaxU32`; niches are guaranteed only for `NonZero*`, references, `Box`, `NonNull`, fn pointers |
 | `usize`/`u64` indices or counts in a type with millions of instances | `u32`/`u16`/`u8`, widen at use sites; `NonZeroU32` newtypes for ids |
 | Bulk-stored enum (tokens, bytecode) above 16 B | Aim for 8-16 B (heuristic): indices or interned ids instead of `String`, `u32` payloads (*measured* 24 → 16 → 8 B) |
-| `#[repr(u8)]` added to a default enum "to shrink it" | It never shrinks a `repr(Rust)` enum (fieldless enums are already 1 B); `repr(u8)`/`repr(C, u8)` only shrink C-like enums |
+| `#[repr(u8)]` added to a default enum "to shrink it" | It never shrinks a `repr(Rust)` enum (fieldless enums are already 1 B) and disables niche filling, so data-carrying enums can grow (8 → 16 B, 24 → 32 B measured); `repr(u8)`/`repr(C, u8)` only shrink C-like enums |
 | A tuned type with no size guard | `const _: () = assert!(size_of::<T>() == N);` gated by `cfg(target_pointer_width)`; inspect with `RUSTFLAGS=-Zprint-type-sizes cargo +nightly build` and `top-type-sizes` |
 | Loop touching 1-3 fields of a >= 64 B struct in `Vec<Struct>` | SoA or hot/cold split, then measure: *measured* 3.3x faster for a 128 B struct reading one field, but 25 % **slower** for a 64 B struct using 4 of 9 fields |
 | Per-thread atomics or `head`/`tail` fields adjacent in memory | `crossbeam_utils::CachePadded` or `#[repr(align(128))]` (*measured* 651 → 41 ms) |
@@ -125,7 +126,7 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 | `break`/`return`/`?`/`&&` inside a byte or int scan (`position`, `any`, `take_while`) | Test a whole chunk with non-short-circuit `&`, branch once per chunk, scalar tail (matklad: 650 → 80 ms); real byte search → `memchr` (2.8) |
 | `f32`/`f64` `+=`, `sum()`, dot product; asm shows `addss`/`addsd` | `algebraic_add` (1.98; never UB, but no NaN/Inf/-0.0 guarantees and non-deterministic even between two identical calls) or 8-32 independent accumulators via `as_chunks` (deterministic) |
 | `if`/`match`/`continue` per element | Branchless body: `if c { a } else { b }` on side-effect-free scalars, `min`/`max`/`clamp`, `(x > t) as u32` |
-| Integer loop where `overflow-checks` blocks vectorization | `wrapping_*` only when modular arithmetic is the intent (hash, PRNG, checksum); otherwise widen the accumulator (`i64`/`u64`) or validate bounds once outside the loop. Never switch off a project's `overflow-checks` (see `rust-conventions`) |
+| Integer loop where `overflow-checks` blocks vectorization | `wrapping_*` only when modular arithmetic is the intent (hash, PRNG, checksum); otherwise widen the accumulator (`i64`/`u64`) or validate bounds once outside the loop. Never switch off a project's `overflow-checks` (see `rust-high-assurance`) |
 | `Vec<Vec<T>>` in a numeric kernel; `&Cell<T>`/raw pointers in the loop | Flat `Vec<T>` with stride; `&mut [T]` + `&[T]` params give `noalias` |
 | One binary for heterogeneous x86 fleets | `multiversion` 0.9 (MSRV 1.86) on the function that contains the loop, or `#[target_feature(enable = "avx2,fma")]` fn (safe since 1.86) + `is_x86_feature_detected!` once at the outer loop with an `#[inline(always)]` generic body |
 | `std::simd` in a stable project | Still nightly-only; use the above or `fearless_simd` 1.2 / `pulp` 0.22 / `wide` 1.7 (no dispatch) |
@@ -133,13 +134,13 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 ### 5. Locks and atomics — `references/concurrency-locks.md`
 
-Preference ladder: owned by one thread → per-thread accumulate + merge → message passing / owner task → `ArcSwap` snapshot → atomics → sharded or concurrent map → `std::sync::Mutex` with a short critical section → last resort `RwLock`, spin.
+Preference ladder: owned by one thread → per-thread accumulate + merge → message passing / owner task → `ArcSwap` snapshot → atomics → sharded or concurrent map → `std::sync::Mutex` with a short critical section. `RwLock` only for long reads, many readers and rare writes (as `rust-conventions` says for read-heavy state); spin locks last.
 
 | You see | Do |
 |---|---|
 | `Mutex<u64>`, `Mutex<bool>`, one-line guard scopes | `AtomicU64`/`AtomicBool` with `Relaxed` for pure statistics; `Release`/`Acquire` when the value publishes other data |
 | `Ordering::SeqCst` everywhere | Weakest correct ordering. x86-64: only `SeqCst` *stores* cost extra; ARM64: `Relaxed` is cheaper than everything else, so wrong `Relaxed` code passes on x86 and fails on ARM. Model-check with `loom` |
-| `load` + `compare_exchange` loop doing an unconditional `+1` | `fetch_add`; conditional updates via `Atomic*::update`/`try_update` (1.95) or `fetch_update` |
+| `load` + `compare_exchange` loop doing an unconditional `+1` | `fetch_add`; updates that need a closure via `Atomic*::update` (1.95); conditional ones via `try_update` (1.95) or `fetch_update`, which skip the write when the closure returns `None` |
 | `Arc<RwLock<Config>>` read per request, written at startup/reload | `arc_swap::ArcSwap` (1.9): lock-free reads, no reader contention |
 | `Arc<Mutex<HashMap>>` shared by many tasks | Shorten the critical section → shard `Box<[Mutex<HashMap>]>` by hash → `dashmap` 6.2 (never hold a `Ref` across another map call or `.await`) or `papaya` 0.2 (read-heavy) |
 | `RwLock` around a small struct or counter | `Mutex` or `ArcSwap`; `RwLock` pays only for long reads, many readers, rare writes. Recursive `read()` may deadlock (OS policy unspecified) |
@@ -155,13 +156,13 @@ Preference ladder: owned by one thread → per-thread accumulate + merge → mes
 | You see | Do |
 |---|---|
 | `contains_key` + `insert`; `get_mut` else `insert` | `entry(k).or_insert_with(..)`; for borrowed `String` keys `hashbrown::HashMap::entry_ref` |
-| Default `HashMap` with short or integer keys hot in the profile, no HashDoS exposure | `rustc_hash::FxHashMap` (2.1), `foldhash` (0.2, hashbrown's default), `ahash` (0.8, slower-moving); ban the default with Clippy `disallowed-types` |
+| Default `HashMap` with short or integer keys hot in the profile, no HashDoS exposure | `rustc_hash::FxHashMap` (2.1), `foldhash` (0.2, hashbrown's default), `ahash` (0.8, slower-moving). Ban the default with Clippy `disallowed-types` only in crates that never hash attacker-controlled keys; keep `RandomState` for externally keyed maps |
 | `.sort()` on primitives; `sort_by_key` with an allocating key; `partial_cmp().unwrap()` on floats | `sort_unstable*`; `sort_by_cached_key`; `total_cmp`. Since 1.81 (driftsort/ipnsort) both sorts may panic on an inconsistent `Ord` |
 | `n.to_string()` / `format!("{}", n)` per record in a serializer | `itoa::Buffer` (1.0), `zmij`/`ryu` for floats, or std `<int>::format_into` + `fmt::NumBuffer` (1.98) |
 | `Vec<Box<dyn Trait>>` iterated per frame/request over a closed set | Generics or a hand-written enum with `match` (the `enum_dispatch` crate generates it) |
 | `LazyLock<[u8; 256]>` or startup code building a pure table | `const fn` into a `static` array; `u8` index into 256 entries needs no bounds check |
 | `v.remove(i)` in a loop; `v = v.into_iter().filter(..).collect()`; `partition` to split out matches | `retain`, `swap_remove`, `Vec::extract_if` (1.87) in place |
-| `v.push(x); v.last_mut().unwrap()`; `split_at_mut` to get two `&mut` | `push_mut` (1.95); `get_disjoint_mut([i, j])` (1.86) |
+| `v.push(x); v.last_mut().unwrap()`; `split_at_mut` to get two `&mut` | `push_mut` (1.95); `get_disjoint_mut([i, j])` (1.86; slice returns `Err` on overlap, `HashMap` version panics on duplicate keys) |
 | Index arithmetic while parsing a `&[u8]` cursor | `split_off(..n)` / `split_off_first()` (1.87); `split_first_chunk::<N>()` for fixed headers |
 | Data-random 50/50 branch (binary search, partition) with high `branch-misses` | `std::hint::select_unpredictable` (1.88); slower if the branch is predictable |
 | Invariant the optimizer cannot see, after reslicing failed | `std::hint::assert_unchecked` (1.81) with a `// SAFETY:` comment and a kept benchmark; UB if false |
@@ -199,10 +200,10 @@ Runtime basics are in `tokio-rust` and `rust-async-conventions`; this skill adds
 
 1. Spend at most 10-100 µs between `.await`s. Sustained CPU work → prefer `rayon::spawn` + `oneshot` (catch panics: `rayon::spawn` aborts the process on panic by default); occasional CPU bursts → `spawn_blocking` + `Semaphore` is fine; blocking I/O → `spawn_blocking` bounded by a `Semaphore` (pool of 512, queue unbounded).
 2. `std::sync::Mutex` for short sync sections; `tokio::sync::Mutex` only when the guard spans an `.await`; an owner task with message passing is often better than either.
-3. Bounded `mpsc::channel(n)` by default; drain with `recv_many`; `oneshot` for replies; unbounded only for sync → async bridges.
+3. Bounded `mpsc::channel(n)` by default; drain with `recv_many`; `oneshot` for replies; unbounded only where producers cannot be slowed (sync → async bridges, logging/metrics as in `tokio-rust`).
 4. No `tokio::spawn` per tiny item: `buffer_unordered(n)` or `JoinSet` + `Semaphore`, sized to downstream capacity.
-5. `Box::pin` large futures at the await site; tokio >= 1.41 auto-boxes only at `spawn` (> 16 KiB in release). Enable Clippy `large_futures`.
-6. `current_thread` or `LocalRuntime` for CLIs and `!Send` state (`Rc<RefCell>` instead of `Arc<Mutex>`).
+5. `Box::pin` large futures at the await site; tokio >= 1.41 auto-boxes only at the runtime hand-off (`spawn`, `block_on`, `LocalRuntime`; > 16 KiB in release). Enable Clippy `large_futures`.
+6. `current_thread` or `LocalRuntime` (stable since tokio 1.51) for CLIs and `!Send` state (`Rc<RefCell>` instead of `Arc<Mutex>`).
 7. `interval` → `MissedTickBehavior::Skip`/`Delay` for periodic work; `BufReader`/`BufWriter` around async sockets; many small `tokio::fs` ops → one `spawn_blocking` with `std::fs`.
 8. `Bytes`/`BytesMut::split_to(n).freeze()` for zero-copy framing and sharing; detach long-lived small slices with `copy_from_slice`.
 9. serde_json: `from_slice` over `from_reader`; borrow `&str`/`#[serde(borrow)] Cow<str>`; typed structs over `Value`. simd-json gives about 1.2-1.5x on typical records in one independent benchmark (sonic-rs numbers are its own); try the cheap fixes first.

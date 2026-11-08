@@ -258,7 +258,7 @@ rustc --print cfg -C target-cpu=native         # what "native" resolved to
 perf stat -e cycles,instructions,branch-misses ./target/release/app
 ```
 
-- Tiny or generic functions vanish from `cargo asm` output (inlined since 1.75). Add a `pub #[inline(never)]` monomorphic probe wrapper in a bench or example and inspect that.
+- Tiny or generic functions vanish from `cargo asm` output (inlined since 1.75). Add an `#[inline(never)] pub fn` monomorphic probe wrapper in a bench or example and inspect that.
 - What to look for: `panic_bounds_check` calls inside the loop; scalar `addss`/`mulss` vs packed `vaddps`/`vfmadd231ps`; `ymm`/`zmm` registers; several accumulators; `vgather*` (often slow).
 - `llvm-mca` models a straight-line loop body on a chosen `-mcpu`; it ignores cache misses and most branch effects, so treat it as an estimate.
 - Keep a regression benchmark next to every `unsafe` hint.

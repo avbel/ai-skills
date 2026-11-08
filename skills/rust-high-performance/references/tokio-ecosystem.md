@@ -8,7 +8,7 @@ Crate versions (crates.io, 2026-11-08): tokio 1.54, tokio-util 0.7, tokio-metric
 
 ### 1.1 Flavor
 
-**Rule**: multi-thread for servers; `current_thread` for CLIs, tests, single-connection tools, and thread-per-core designs (N `current_thread` runtimes with `SO_REUSEPORT`). Tokio docs: "Most applications should use the multi-thread scheduler, except in some niche use-cases". Send futures -> multi-thread; `!Send` -> `LocalRuntime` (`Builder::new_current_thread().build_local(LocalOptions::default())`, then `rt.spawn_local`); otherwise current-thread.
+**Rule**: multi-thread for servers; `current_thread` for CLIs, tests, single-connection tools, and thread-per-core designs (N `current_thread` runtimes with `SO_REUSEPORT`). Tokio docs: "Most applications should use the multi-thread scheduler, except in some niche use-cases". Send futures -> multi-thread; `!Send` -> `LocalRuntime` (stable since tokio 1.51; `Builder::new_current_thread().build_local(LocalOptions::default())`, then `rt.spawn_local`); otherwise current-thread.
 **Detect**: `#[tokio::main]` on a tiny CLI; `Arc<Mutex<_>>` only to satisfy `Send` in a single-threaded program; one big runtime on a multi-socket NUMA host (the runtime is not NUMA-aware; start several).
 **Caveat**: `current_thread` has no work stealing and `block_in_place` panics on it.
 Source: https://docs.rs/tokio/latest/tokio/runtime/index.html
@@ -197,7 +197,7 @@ Source: https://docs.rs/tokio/latest/tokio/runtime/struct.Builder.html (blocking
 
 ### 1.13 Scheduler knobs (only with a metric)
 
-`event_interval` (default 61) and `global_queue_interval` (current_thread 31; multi-thread adaptive, targeting ~10 ms between global-queue checks) are stable. `disable_lifo_slot()`, `enable_alt_timer()`, `enable_eager_driver_handoff()`, `enable_sharded_blocking_queue()` need `tokio_unstable` and may change or be removed. Try `disable_lifo_slot` when scheduled time is high but the runtime is underutilized, confirmed with tokio-metrics.
+`event_interval` (default 61) and `global_queue_interval` (current_thread 31; multi-thread adaptive, targeting ~200 µs between global-queue checks) are stable. `disable_lifo_slot()`, `enable_alt_timer()`, `enable_eager_driver_handoff()`, `enable_sharded_blocking_queue()` need `tokio_unstable` and may change or be removed. Try `disable_lifo_slot` when scheduled time is high but the runtime is underutilized, confirmed with tokio-metrics.
 Source: https://docs.rs/tokio/latest/tokio/runtime/struct.Builder.html
 
 ### 1.14 `select!` ordering
@@ -207,7 +207,7 @@ Source: https://docs.rs/tokio/latest/tokio/macro.select.html
 
 ## 2. `bytes`
 
-**Rule**: `Bytes` is a refcounted, cheaply cloneable, sliceable view (`clone`/`slice`/`split_to` copy nothing; `from_static` and `Bytes::from(Vec<u8>)` are allocation-free). Frame protocols with `BytesMut`: read into it, `split_to(n).freeze()` yields an immutable frame while the buffer keeps accepting reads. Share payloads across tasks as `Bytes`, not `Vec<u8>` clones.
+**Rule**: `Bytes` is a refcounted, cheaply cloneable, sliceable view (`clone`/`slice`/`split_to` copy nothing; `from_static` is allocation-free; `Bytes::from(Vec<u8>)` is copy-free but allocates a small shared header unless `len == capacity`). Frame protocols with `BytesMut`: read into it, `split_to(n).freeze()` yields an immutable frame while the buffer keeps accepting reads. Share payloads across tasks as `Bytes`, not `Vec<u8>` clones.
 **Detect**: `buf[..n].to_vec()` after a read; `Vec<u8>.clone()` per consumer; hand-rolled framing with `drain(..n)` (O(n) memmove).
 
 ```rust
@@ -347,15 +347,21 @@ Sources: https://github.com/moka-rs/moka · https://github.com/arthurprs/quick-c
 **Detect**: `reqwest::get(url)` or `Client::new()` inside a handler or loop; `.bytes().await` on multi-MB bodies; no timeouts.
 
 ```rust
-static CLIENT: std::sync::LazyLock<reqwest::Client> = std::sync::LazyLock::new(|| {
-    reqwest::Client::builder()
+pub struct AppState {
+    pub http: reqwest::Client,
+}
+
+pub fn build_state() -> Result<AppState, reqwest::Error> {
+    let http = reqwest::Client::builder()
         .pool_max_idle_per_host(32)
         .connect_timeout(std::time::Duration::from_secs(3))
         .timeout(std::time::Duration::from_secs(15))
-        .build()
-        .expect("reqwest client")
-});
+        .build()?;
+    Ok(AppState { http })
+}
 ```
+
+Build it once in `main` (or app state) with `?` and pass clones; avoid a process-global `static` client, which hides the build error behind a panic and can outlive the runtime it was used on (per-test runtimes).
 
 **Caveat**: `Client::new()` panics if the TLS backend fails to initialize; use `builder().build()` to handle the error. Building a client loads root certificates.
 Source: https://docs.rs/reqwest/latest/reqwest/struct.Client.html
