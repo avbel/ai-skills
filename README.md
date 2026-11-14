@@ -143,6 +143,12 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `rust-high-performance` | Build config, allocators, inlining, layout, SIMD, locks, tokio |
 | `power-rust` | Prompt patterns that reduce LLM Rust bugs (versions, cancel-safety, SAFETY) |
 
+### Go
+
+| Skill | Covers |
+|-------|--------|
+| `go-high-performance` | Benchmarking, profiling, allocations, GC, concurrency, PGO, and code generation |
+
 ### JavaScript / TypeScript — libs & tools
 
 | Skill | Covers |
