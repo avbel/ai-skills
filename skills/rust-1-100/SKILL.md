@@ -9,7 +9,7 @@ Rust 1.100.0 was released on **2026-11-12** (branched from master 2026-09-25). U
 
 - Announcement: <https://blog.rust-lang.org/2026/11/12/Rust-1.100.0/>
 - Detailed changelog: <https://releases.rs/docs/1.100.0/>
-- Nightly-gated items that graduated in this release: see the `rust-nightly` skill (`never_type`, `allocator_api` are no longer nightly).
+- Nightly-gated items that graduated in this release: see the `rust-nightly` skill (`never_type` is fully stable; the *core* of `allocator_api` is stable for `Vec`/`Box` — the rest of that gate, e.g. `AllocatorClone`, `GlobalAllocator` helpers and fallible `try_new_in` constructors, is still nightly).
 
 ## Never Type `!` Is Stable
 
@@ -18,7 +18,7 @@ After 10 years, the never type `!` — the canonical uninhabited type of divergi
 ```rust
 // `Result<T, !>` could not be written before 1.100.
 fn infallible_unwrap<T>(res: Result<T, !>) -> T {
-    let Ok(v) = res; // the None-equivalent arm is statically impossible
+    let Ok(v) = res; // the Err arm is statically impossible
     v
 }
 ```
@@ -27,9 +27,8 @@ fn infallible_unwrap<T>(res: Result<T, !>) -> T {
 
 Guidance:
 
-- Model truly-unreachable error states as `Result<T, !>` (or `io::Result` style enums with an uninhabited error variant) instead of `unwrap()`-documented "can't happen" invariants — the type system then proves it.
+- Model truly-unreachable error states as `Result<T, !>` (or enums with an uninhabited error variant) instead of documented `unwrap()` "can't happen" invariants — the type system then proves it.
 - `!` coerces to any type in `match`/`if` arms, which is what makes diverging arms (`None => return`) type-check; this was observable before 1.100 and is unchanged.
-- **Do not** use `!` as a "placeholder" generic argument in macros expecting a type; it is genuinely uninhabited and code paths "returning" it are unreachable.
 
 ```rust
 fn mrrrow(option: Option<u32>) {
@@ -51,25 +50,29 @@ The core `Allocator` trait is stable, enabling custom allocators for std types �
 ```rust
 use std::alloc::{AllocError, Allocator, Global, Layout};
 use std::ptr::NonNull;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-/// Example only: forwards to `Global`, logging allocations.
-struct LoggingAlloc;
+/// Example only: forwards to `Global`, counting live allocations.
+struct CountingAlloc;
 
-unsafe impl Allocator for LoggingAlloc {
+static LIVE: AtomicUsize = AtomicUsize::new(0);
+
+unsafe impl Allocator for CountingAlloc {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         let block = Global.allocate(layout)?;
-        eprintln!("alloc {} bytes at {:?}", layout.size(), block);
+        LIVE.fetch_add(1, Ordering::Relaxed); // atomics never unwind
         Ok(block)
     }
 
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
         // SAFETY: `ptr` was produced by an equivalent allocator (Global).
         unsafe { Global.deallocate(ptr, layout) }
+        LIVE.fetch_sub(1, Ordering::Relaxed);
     }
 }
 
 fn main() {
-    let mut v: Vec<u32, LoggingAlloc> = Vec::new_in(LoggingAlloc);
+    let mut v: Vec<u32, CountingAlloc> = Vec::new_in(CountingAlloc);
     v.extend([1, 2, 3]);
 }
 ```
@@ -77,8 +80,10 @@ fn main() {
 Rules and guidance:
 
 - Required methods: `allocate` and `deallocate`. Provided (overridable): `allocate_zeroed`, `grow`, `grow_zeroed`, `shrink`.
+- **Allocating/deallocating methods must not unwind** (rustdoc Safety contract) — a panic inside an allocator is a soundness problem. Use atomics or `let _ = writeln!(std::io::stderr(), …)`; never `eprintln!`/`unwrap()` inside these methods.
 - Unlike `GlobalAlloc`, `Allocator` **must support zero-sized allocations** and returns `Result<NonNull<[u8]>, AllocError>` instead of null pointers — wrap `libc::malloc`-style backends so `0`-size requests return a valid dangling non-null.
-- Equivalence matters: an allocator moved/cloned, or referenced via `&A`/`&mut A`/`Box<A>`/`Rc<A>`/`Arc<A>` (blanket impls stabilized in 1.100), is *equivalent* to the original and may deallocate its blocks. Design custom allocators as ZSTs, references, or smart pointers; an immovable `MyAlloc([u8; N])` by value cannot be made sound.
+- Equivalence matters: an allocator referenced via `&A`/`&mut A`/`Box<A>`/`Rc<A>`/`Arc<A>` (blanket impls stabilized in 1.100), moved, or subtype-coerced is *equivalent* to the original and may deallocate its blocks. Copying/cloning creates an equivalent allocator only if the (still experimental) `AllocatorClone` trait is implemented.
+- An allocator that owns its buffer by value (e.g. `MyAlloc([u8; N])`) cannot be soundly created without being pinned or otherwise immovable — prefer ZSTs, references, or smart pointers as the allocator type.
 - Construct with the `*_in` constructors (`Vec::new_in`, `Vec::with_capacity_in`, `Box::new_in`); the constructor surface is still growing — check current rustdoc before using less common entry points.
 - If your type needs a global allocator (not per-collection), keep using `GlobalAlloc` + `#[global_allocator]`; `Allocator` is for per-collection control.
 
@@ -90,10 +95,10 @@ Rules and guidance:
 use std::mem::DropGuard;
 
 // Simple inline destructor:
-{
+fn demo() {
     let s = String::from("Chashu likes tuna");
-    let mut s = DropGuard::new(s, |s| println!("{s}")); // prints when scope exits
-    s.push_str("!!!");                                  // DerefMut passthrough
+    let mut s = DropGuard::new(s, |s| println!("{s}")); // prints when `demo` returns
+    s.push_str("!!!"); // DerefMut passthrough
 }
 
 // All-or-nothing rollback — the pattern DropGuard was designed for:
@@ -120,26 +125,38 @@ Use it instead of a one-off `struct` + `impl Drop` for transactional/rollback an
 ## `mem::conjure_zst` — Sanctioned ZST Construction
 
 ```rust
-// pub const unsafe fn conjure_zst<T>() -> T
-unsafe fn make_unit() -> () {
-    // SAFETY: `()` is an inhabited zero-sized type.
-    unsafe { std::mem::conjure_zst::<()>() }
-}
+use std::mem::conjure_zst;
+
+// SAFETY: `()` and `[i32; 0]` are inhabited zero-sized types.
+assert_eq!(unsafe { conjure_zst::<()>() }, ());
+assert_eq!(unsafe { conjure_zst::<[i32; 0]>() }, []);
 ```
 
 `conjure_zst` creates a value of an inhabited zero-sized `T` without a bound like `Default`. Prefer it over `transmute(())`, `MaybeUninit::uninit().assume_init()`, and similar incantations. It **panics if `T` is not zero-sized** and is **unsound for uninhabited types** (`!`, zero-variant enums) or types whose safety invariants gate construction (e.g. zero-sized capability tokens like PyO3's `Python<'py>`, which proves GIL possession by being unconstructible). If you are unsure `T` is an inhabited ZST, use `MaybeUninit` instead.
 
 ## `extern "custom"`
 
-Functions may now be declared with `extern "custom"` — an ABI rustc does not define, resolved by other tooling (used by compiler-builtins and custom backends). It exists so such functions can be *named and typechecked*; calling conventions are supplied externally:
+`extern "custom"` declares a function whose calling convention rustc does not define at all — no prologue/epilogue, no register contract. It exists for toolchain/runtime authors (e.g. compiler-builtins); application code almost never needs it. The rules are strict (Reference, *extern functions* → custom ABI):
+
+- the function must be `unsafe`, take **no parameters**, and return `()`;
+- its body must be `#[unsafe(naked)]` inline assembly;
+- the only way to call it is inline `asm!` — it cannot be called directly from Rust;
+- the `safe` qualifier is rejected inside `extern "custom"` blocks, and edition 2024 requires `unsafe extern` blocks.
 
 ```rust
-extern "custom" {
-    fn some_intrinsics_fn(x: u32) -> u32;
+use std::arch::{asm, naked_asm};
+
+#[unsafe(naked)]
+unsafe extern "custom" fn increment() {
+    naked_asm!();
+}
+
+fn caller(mut x: u64) -> u64 {
+    // SAFETY: the ABI is defined by the asm block below.
+    unsafe { asm!("call {}", sym increment, inout("rax") x) };
+    x
 }
 ```
-
-Application code rarely needs this; treat it as an FFI escape hatch for tool authors.
 
 ## Stabilized API Impls
 
@@ -171,7 +188,7 @@ $ cargo update
 $ CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow cargo update clap --precise 4.6.9
 ```
 
-Caveats: registry must record publish times (versions without `pubtime` are never held back); `cargo install` ignores the setting — pin with `cargo install foo@1.2.3`; this complements but does not replace dependency review. Once a newer version lands in `Cargo.lock`, later `cargo update` re-resolutions keep it.
+Caveats: registry must record publish times (versions without `pubtime` are never held back); `cargo install` ignores the setting — pin with `cargo install foo@1.2.3`; this complements but does not replace dependency review. An override records the newer version in `Cargo.lock`, which is then kept until a later `cargo update` re-resolves it. Per-registry alternative: `registries.<name>.min-publish-age`; the override key is `resolver.incompatible-publish-age` (env: `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE`).
 
 ### Cargo lints (`[lints.cargo]`) + unused-dependency warnings
 
@@ -194,8 +211,8 @@ Limitations: the warning only appears when building *every* target that could us
 Before upgrading a real codebase, see [references/compatibility.md](references/compatibility.md). Highlights:
 
 - Never-type fallback changed on pre-2024 editions — rare inference breakage; update broken dependencies before patching them yourself.
-- **`box` patterns are no longer syntactically allowed** — `box x` in patterns was long-deprecated; migrate to `deref_patterns` (nightly) or explicit matching.
-- `Infallible` is now a type alias to `!` — code treating it as its own enum type (e.g. exhaustive matches on `Infallible` variants) no longer compiles.
+- **`box` patterns are no longer syntactically allowed** — the `box_patterns` gate was nightly-only and never stable; since 1.100 the syntax is rejected outright. Migrate to `deref_patterns` (nightly) or explicit matching.
+- `Infallible` is now a type alias to `!` — old `Result<T, Infallible>` code keeps compiling; any breakage traces to the fallback change above (PR #155499), not to the alias itself.
 - Std now uses **Unicode 18.0.0**.
 
 ## MSRV Notes

@@ -32,8 +32,9 @@ fn main() {
 
 Rules and guidance:
 
-- The function must be `unsafe extern "C"` (or `"C-unwind"`) and the variadic parameter must be last and named (conventionally `args: ...`).
-- `args.next_arg::<T>()` is `unsafe` and only sound if the caller actually passed a `T`; `VaArgSafe` rejects types with unstable C ABIs (e.g. non-`repr(C)` structs), not wrong argument counts — that contract stays on you. Document it in a `SAFETY:` comment as in the sample.
+- The function must be `unsafe extern "C"` (or `"C-unwind"`) and the variadic parameter must be last and carry a name (`args: ...` or `_: ...`; a bare `...` is rejected).
+- `args.next_arg::<T>()` is `unsafe` and only sound if the caller actually passed a `T` — a wrong argument count is not caught anywhere. That contract stays on you; document it in a `SAFETY:` comment as in the sample.
+- `next_arg::<T>` requires `T: VaArgSafe` — a sealed trait implemented only for `c_int`-width and wider integers, `c_double`, and raw pointers. It rejects *all* structs (even `#[repr(C)]`) and narrow types like `i8`/`u16`/`f32`, because C default-argument promotion applies in variadic calls. Read `c_int`/`c_double` and cast afterwards rather than relying on the `i32`/`usize` impls.
 - 1.99 also stabilizes *naked* variadic functions (`#[unsafe(naked)]` + non-`"C"` ABIs); the body must be inline assembly.
 - Prefer a typed Rust API (slice/iterator, `serde`, builder) over variadics in new code; use these only at a real C ABI boundary.
 
@@ -45,18 +46,25 @@ Three functions settle how to get size/alignment without a valid reference — p
 - `mem::align_of_val_raw(ptr) -> usize`
 - `Layout::for_value_raw(ptr) -> Layout`
 
-They read only the pointer's *metadata* (length/capacity part of fat pointers), so the pointee memory may be uninitialized, expired, or dangling:
+They read only the pointer's *metadata* (the length or vtable stored in a fat pointer), so the pointee memory may be uninitialized, expired, or dangling:
 
 ```rust
 use std::mem::size_of_val_raw;
 
+// Safe: `len()` on a raw slice pointer reads only the metadata.
 fn element_count(slice: *const [u8]) -> usize {
-    // SAFETY: only slice metadata is read; the pointee is not touched.
+    slice.len()
+}
+
+// Total byte size needs the unsafe API. The caller must guarantee the
+// computed size fits in `isize` — see the rustdoc Safety section.
+unsafe fn byte_size(slice: *const [u8]) -> usize {
+    // SAFETY: the whole pointee's size fits in `isize`, per the caller.
     unsafe { size_of_val_raw(slice) }
 }
 ```
 
-Safety contract: the pointer's *metadata* must be valid (e.g. a `*const [T]` whose length is meaningful). A reference is never required, which is the point — this is the sanctioned replacement for transmuting fat pointers or constructing fake references to query layout.
+Safety contract: the pointer's *metadata* must be valid (e.g. a `*const [T]` whose length is meaningful), and — for `size_of_val_raw`/`Layout::for_value_raw` — the resulting size must fit in `isize`. A reference is never required, which is the point: this is the sanctioned replacement for transmuting fat pointers or constructing fake references to query layout.
 
 ## `Box::leak`: No Round-Trip Unleaking
 
@@ -74,22 +82,34 @@ let raw: *mut i32 = Box::into_raw(Box::new(42));            // or:
 
 The same guidance applies to every other `leak` in std (`String::leak`, `OsString::leak`, …).
 
-## Attribute Macros over Outlined Modules
+## Outlined Modules in Proc-Macro Input
 
-`#[my_macro] mod foo;` is now stable — an outlined module (`mod foo;`, body in another file) may appear anywhere in the body of a custom attribute or derive macro:
+`#[my_macro] mod foo;` is now stable — an attribute macro may be applied to an outlined module (`mod foo;`, body in another file), and outlined modules may appear anywhere in the macro's *input*:
 
 ```rust
-#[derive(serde::Serialize)] // or any proc macro that emits items around the module
-mod config;                  // expanded in place since 1.99; before: error
+#[my_attr]
+mod config; // file module as attribute-macro input — E0658 before 1.99
+
+#[my_attr]
+mod outer {
+    mod inner; // outlined submodule nested inside macro input — also 1.99
+}
 ```
 
-Before 1.99 the module had to be inline (`mod foo { ... }`) inside macro output. If a proc-macro crate you maintain emitted `mod foo;` errors, drop the workaround.
+Before 1.99, passing a file module as proc-macro input failed with E0658 ("file modules in proc macro input are unstable"); the module had to be inline. Macro *output* could already contain `mod foo;`. Proc macros that rejected outlined modules in their input can now accept them.
 
 ## Stabilized APIs
 
 | API | Notes |
 |---|---|
 | `IntoIterator` for `Box<[T; N]>`, `&Box<[T; N]>`, `&mut Box<[T; N]>` | boxed arrays now iterate like arrays: `Box::new([1,2,3]).into_iter().sum::<i32>()` |
+| `Box::into_non_null` / `Box::from_non_null` | ownership transfer without a reference; the preferred alternative to unleaking `Box::leak` output |
+| `Vec::from_parts` / `Vec::into_parts` | build/deconstruct a `Vec` from/to (pointer, len, capacity) |
+| `String::from_utf8_lossy_owned` | lossy conversion reusing the input buffer |
+| `VecDeque::retain_back` | `retain` from the back |
+| `fs::set_times` / `fs::set_times_nofollow` | set access/modification times on an open file |
+| `LocalKey<Cell<T>>::update` | in-place thread-local update |
+| `FusedIterator` for `StepBy` | |
 | `core::fmt::NumBuffer` re-exported in `alloc`/`std` | allocation-free integer formatting buffer (the `<int>::format_into` from 1.98) |
 
 ```rust
@@ -123,8 +143,8 @@ serde = { version = "1", features = ["derive"] }  # derive enabled
 serde = { workspace = true, default-features = false }
 ```
 
-- **CI**: incremental compilation is now off by default when the `CI` env variable is set — remove any manual `CARGO_INCREMENTAL=0` workarounds.
+- **CI**: incremental compilation is now off by default when the `CI` env variable is set — you can drop manual `CARGO_INCREMENTAL=0` workarounds once every CI job (including MSRV jobs) runs Rust ≥ 1.99 with `CI` set.
 
 ## MSRV Notes
 
-Code using the features in this skill needs `rust-version = "1.99"`. For code that must also build on older toolchains, gate the new APIs behind `cfg` or a feature flag rather than relying on them unconditionally. See the full [compatibility notes](references/compatibility.md) before upgrading a large codebase.
+Code using the features in this skill needs `rust-version = "1.99"`. For code that must also build on older toolchains, gate the new APIs behind a Cargo feature or a build.rs capability probe (`autocfg`, `rustversion`) — `cfg(version)` is still nightly-only. See the full [compatibility notes](references/compatibility.md) before upgrading a large codebase.

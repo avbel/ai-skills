@@ -47,7 +47,7 @@ Rust's compiler **proves the absence of memory-corruption bugs** (use-after-free
 For software that "must survive" (no patches, no failures):
 
 - **Fallible APIs** — return `Result` instead of panicking on recoverable conditions; reserve `panic!` for truly unreachable contract violations. Prefer `TryFrom`/`TryInto` for fallible conversions, `From`/`Into` for infallible.
-- **Handle OOM** — in memory-constrained / long-running systems use **fallible allocation**: `Vec::try_reserve`/`try_reserve_exact` and `HashMap::try_reserve` (stable) surface allocation failure as `Result` instead of aborting; for fallible `Box`/custom-allocator paths use the still-unstable `allocator_api`. Prefer pre-sized + `try_reserve` over infallible `push`/`extend` in hot allocation paths.
+- **Handle OOM** — in memory-constrained / long-running systems use **fallible allocation**: `Vec::try_reserve`/`try_reserve_exact` and `HashMap::try_reserve` (stable) surface allocation failure as `Result` instead of aborting; custom allocators for `Vec`/`Box` are stable since 1.100, but the fallible-constructor part (`Box::try_new_in` etc.) is still unstable. Prefer pre-sized + `try_reserve` over infallible `push`/`extend` in hot allocation paths.
 - **No-panic posture** — audit for hidden panics (indexing, `unwrap`, integer division, slicing); prefer `get()`, `checked_*`, explicit bounds. Validate all untrusted input at the boundary, fail fast with a typed error.
 - **Catch integer overflow in release** — overflow panics in debug but silently wraps in release by default. For high-assurance builds set `overflow-checks = true` under `[profile.release]` (small runtime cost) and/or use `checked_*`/`saturating_*`/`Wrapping` explicitly where wrapping is intended.
 - **Encode invariants in types** — newtypes with validating constructors, `NonZero*`, typestate — so invalid states are unrepresentable rather than runtime-checked (see `design-patterns-rust`).
@@ -64,7 +64,7 @@ For software that "must survive" (no patches, no failures):
 - **Reproducible builds** — commit **`Cargo.lock`** for anything that builds an executable so everyone builds identical dependency versions; add **`rust-toolchain.toml`** to pin the compiler version and target. `cargo update` deliberately, then `cargo test`.
 - **Pin/self-host critical deps** — git dependencies can lock to a `rev` (commit hash) and live in a private/self-hosted repo: `clap = { git = "…", rev = "31bd0b5" }`. Keep a known-good internal version while you vet upstream.
 - **Minimize and vet** the dependency graph — fewer, well-trusted deps; ban duplicate versions of security-critical crates (e.g. allowlist crypto publishers). Consider `cargo-vet`/`cargo-deny` to enforce policy.
-- **Dependency cooldowns** (Rust 1.100+, built into Cargo) — set `[registry] global-min-publish-age = "3 days"` in `.cargo/config.toml` so the resolver skips freshly published versions; most malicious releases are caught within that window. Complements `cargo-audit`, does not replace review. Details: `rust-1-100` skill, Cargo section.
+- **Dependency cooldowns** (Rust 1.100+, built into Cargo) — set `[registry] global-min-publish-age = "3 days"` in `.cargo/config.toml` so the resolver skips freshly published versions; malicious releases are *often* caught within hours or days of publication (per the 1.100 announcement). Complements `cargo-audit`, does not replace review. Details: `rust-1-100` skill, Cargo section.
 
 ## Recommended toolchain
 

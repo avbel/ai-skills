@@ -151,7 +151,7 @@ pub fn my_attr(attr: TokenStream, item: TokenStream) -> TokenStream { item }
 pub fn my_derive(item: TokenStream) -> TokenStream { TokenStream::new() }
 ```
 
-- Since Rust 1.99, an outlined module (`mod foo;`) may appear anywhere in attribute/derive macro output — `#[my_attr] mod foo;` is stable. Before 1.99, macro-generated `mod` items had to be inline (`mod foo { ... }`); drop any workaround that inlined modules only to satisfy the macro.
+- Since Rust 1.99, proc-macro *input* may contain outlined modules: `#[my_attr] mod foo;` compiles, and so does an outlined `mod` nested inside the item an attribute receives. Before 1.99 this failed with E0658 ("file modules in proc macro input are unstable") — the module had to be inline. Macro *output* could already contain `mod foo;`.
 
 ### syn + quote
 

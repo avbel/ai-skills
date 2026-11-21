@@ -60,7 +60,7 @@ Primary source for every version number: https://github.com/rust-lang/rust/blob/
 | **`<int>::format_into` + `fmt::NumBuffer`** | **1.98** (std re-export 1.99) | integer formatting close to `itoa` without allocation |
 | NEON `vdot*` intrinsics | 1.98 | |
 | `RangeInclusive` iteration optimized | 1.99 | free; exhausted-range `start()/end()` behaviour changed |
-| Never type `!` stable everywhere; `Infallible` = alias of `!`; pre-2024 editions fall back to `!` | 1.100 | `Result<T, !>` zero-size, exhaustive matches elided |
+| Never type `!` stable everywhere; `Infallible` = alias of `!`; pre-2024 editions fall back to `!` | 1.100 | `Result<T, !>` layout equals `T`'s (uninhabited variant elided, same as before via `Infallible`); exhaustive matches drop the error arm |
 | `extern "custom"` | 1.100 | name fns whose ABI is defined by external tooling |
 | `Iterator::{min,max}(_by_key)` call `Ord::min`/`Ord::max` when overridden | 1.100 | faster for types that override; no change for correct `Ord` |
 | x86 "Rust" ABI uses SSE registers where always available | 1.100 | SIMD args in registers |
