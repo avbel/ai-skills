@@ -5,7 +5,7 @@ description: Systematic debugging for hard bugs — reproduce, bisect, root-caus
 
 # Systematic Debugging
 
-For bugs that survive the first obvious fix. The core discipline: **find the root cause before writing any fix**. A fix without a root cause is a guess, and guesses that "work" hide the real bug. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
+For bugs that survive the first obvious fix. The core discipline: **find the root cause before writing any fix**. A fix without a root cause is a guess, and guesses that "work" hide the real bug. Part of the `dev-*` development-cycle skill set.
 
 ## Phase 1 — Reproduce and Localize (always)
 

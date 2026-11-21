@@ -195,11 +195,12 @@ Cross-language workflow skills sharing one philosophy: cheapest sufficient proce
 
 | Skill | Covers |
 |-------|--------|
-| `dev-cycle` | Router and shared philosophy for the dev-* skill set |
+| `dev-cycle` | Router that picks the dev-* workflow for a task |
 | `dev-feature-lite` | Minimal path for obvious changes: implement, verify, report |
 | `dev-feature` | Coordinated features: clarify, in-chat plan, implement |
 | `dev-problem-solving` | Brainstorm approaches, decide, solution doc, reviewed build plan |
 | `dev-review` | Scoped review: correctness, security, expected load, meaningful tests |
+| `dev-loop` | Unattended task queue: fresh worker per task, ledger, capped fixes |
 | `dev-testing` | Contract-focused tests, real-engine fidelity, verified API mocks |
 | `dev-e2e-testing` | Production-parity e2e: real services, local chains, network-fault injection |
 | `dev-debug` | Root-cause debugging, debugger configs for IDEs and CLI |

@@ -5,11 +5,11 @@ description: Compound engineering — capture solved problems, root causes, and 
 
 # Project Knowledge Base — Compound Engineering
 
-Each solved problem should make the next one cheaper. Capture lessons as small, linked markdown notes inside the repo, and **read them before repeating work**. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
+Each solved problem should make the next one cheaper. Capture lessons as small, linked markdown notes inside the repo, and **read them before repeating work**. Part of the `dev-*` development-cycle skill set.
 
 ## Use the Configured Store
 
-Honor repository/user memory instructions first (for example YantrikDB or an existing ADR store). Retrieve relevant lessons there; do not create a parallel markdown store or duplicate the same lesson in both. Respect write permissions and any explicit-only capture policy. The file workflow below is the fallback when markdown knowledge is the chosen store.
+Honor repository/user memory instructions first (for example a memory server or an existing ADR store). Retrieve relevant lessons there; do not create a parallel markdown store or duplicate the same lesson in both. Respect write permissions and any explicit-only capture policy. The file workflow below is the fallback when markdown knowledge is the chosen store.
 
 ## Layout
 

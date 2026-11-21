@@ -5,7 +5,7 @@ description: Structured problem solving for non-trivial problems — gather data
 
 # Problem Solving — Brainstorm → Decide → Plan → Review
 
-For problems where the *approach* is the hard part. The output is a decision the user owns, a short solution doc, and a reviewed build plan. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
+For problems where the *approach* is the hard part. The output is a decision the user owns, a short solution doc, and a reviewed build plan. Part of the `dev-*` development-cycle skill set.
 
 **Downgrade** to `dev-feature` if, after Phase 1, only one sensible approach exists — say so in one line and switch. Don't manufacture alternatives for a solved problem.
 
@@ -73,7 +73,7 @@ Write **one** markdown doc (`docs/solutions/<topic>.md`, or the path the user pr
 ## Build plan   — ordered steps, each independently testable/shippable
                   and sized to fit one fresh agent context;
                   per step: files/areas touched, test strategy (see dev-testing),
-                  dependencies (`depends on: step N` or `parallel-ok`), and
+                  dependencies (`depends on: step N`), and
                   validation: the exact command that proves the step done
                   (e.g. `pnpm vitest run tests/sync.test.ts`) — a step without
                   a runnable done-check isn't planned yet.
@@ -92,15 +92,10 @@ Before implementing, review the build plan — plans are cheapest to fix now:
 1. **Self-review adversarially:** What breaks mid-rollout if we stop after step 2? What does this assume about load/data shape that nobody verified? Which step is secretly two steps? Which helper, interface, option, or dependency can be omitted without weakening the chosen solution?
 2. Fold findings into the doc, show the user the delta, get the go-ahead.
 
-## Phase 5 — Build (parallelize where the plan allows)
+## Phase 5 — Build
 
-Implement per `dev-feature` discipline for each step, with `dev-code-style`'s clear names, justified abstractions, and sparse comments. Keep extended design rationale in the solution doc; source comments carry only context needed at that location. **Use parallel subagents only when independent steps justify duplicated context and integration cost**, and delegation is permitted. A small step is often cheaper in the current context. That is why the plan marks dependencies:
+Run the build plan with `dev-loop`: the plan's steps are its queue, each step's validation command is its done-check, and the solution doc's Decision section goes into every brief. `dev-loop` owns model choice, fix-round caps, and checks. Extended design rationale stays in the solution doc. One plan-specific rule goes into the dev-loop ledger's Rules line:
 
-- **Parallel-safe:** steps marked `parallel-ok` that touch **disjoint files/modules** (the plan's "files/areas touched" line is the check). Dispatch them as concurrent agents in one batch; each agent gets its plan step verbatim, the solution doc's Decision section, and the anti-gaming contract: *do not delete, skip, weaken, or narrow tests to reach green; do not refactor unrelated code; do not add dependencies beyond the plan; if blocked, report back instead of working around*.
-- **Check independence rather than assuming it:** tests/mocks depend on contracts; docs depend on final behavior. Delegate them concurrently only when those inputs are stable. Give each agent the goal, owned paths, constraints, and done-check; return changed paths, check results, and unresolved facts rather than a transcript.
-- **Keep sequential:** steps sharing files or types (unless isolated in git worktrees and merged deliberately), anything touching the same migration chain, and steps whose output changes a later step's design.
-- **Join point after each parallel batch:** run each step's validation command, then required integration checks on the combined result; reuse earlier results only if their inputs are unchanged — cross-step integration is exactly what parallel agents can't see. A green batch is the checkpoint before dispatching the next one. More autonomy means more review, not less: diff-review each agent's output before merging it.
-- Don't force it: for a 3-step plan with a linear dependency chain, sequential is simpler and cheaper. Parallelism pays off from ~2+ genuinely independent steps.
-- **A step that fails twice stops the plan, not just the step.** After two attempts at the same step — yours or a re-dispatched agent's — don't try a third variation: what's wrong is the plan's assumption about that step. Report what each attempt changed and why it failed, then settle it with the user: split the step, revisit the Decision section, or drop it and record why. Reworking the plan costs less than a third attempt against a wrong premise.
+- **A step that dev-loop leaves blocked — done-check still failing or a Blocking finding open after the escalation round — stops the plan, not just the step:** the plan's assumption about that step is wrong. Report what each attempt changed and why it failed, then settle it with the user: split the step, revisit the Decision section, or drop it and record why.
 
 When done, capture lessons via `dev-knowledge` — link the knowledge note to the solution doc.

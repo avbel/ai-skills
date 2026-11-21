@@ -5,27 +5,27 @@ description: Scoped workflow for coordinated features and changes — clarify re
 
 # Coordinated Feature — Fast Path
 
-For coordinated changes scoped to hours: one in-chat plan, then code. The enemy is ceremony — no design docs, no multi-phase process, no summary documents afterwards. This file is the whole workflow: load no other `dev-*` skill unless a step below names it, and run no review, second opinion, or reviewer subagent unless the user or the repository's instructions ask for one.
+For coordinated changes scoped to hours: one short in-chat plan, then code. No design docs, multi-phase process, or summary files. This file is the whole workflow: load no other `dev-*` skill unless a step names it, and run no review, second opinion, or subagent unless the user or the repository's instructions ask. Repository instructions and project skills override this file wherever they cover the same ground; use the commands and conventions they list instead of rediscovering them.
 
-**Downgrade instead** to `dev-feature-lite` when the behavior and implementation path are obvious and the change can proceed without a plan or user decision.
+**Downgrade** to `dev-feature-lite` when the path is obvious and needs no plan or user decision. **Escalate** when the root cause is unknown → `dev-debug`, or several architectures are viable → `dev-problem-solving`. Say which and why in one line.
 
-**Escalate instead** when the task smells bigger: unknown root cause → `dev-debug`; multiple viable architectures or "how should we..." → `dev-problem-solving`. Say you're escalating and why, in one line.
+## Rules
 
-## Step 1 — Clarify (only if genuinely needed)
+- **No silent scope cuts.** Implement every part of the plan. If a part proves harder than planned, or a stub or `TODO` is tempting, stop and tell the user first. Approved leftovers go under "Deferred" in the report.
+- **Never delete, skip, weaken, or narrow a test to get green** — a blocking test is a finding to raise with the user.
+- **Paths outside the repository are read-only** unless the user explicitly confirms an edit; copy what you need into the project and adapt the copy.
+- **Reuse before building:** project utilities, standard-library/native features, and installed dependencies before custom code; no new package unless the plan names it. Share code only when meaning and ownership align — don't widen a private API or couple unrelated modules to remove similar lines.
+- **Direct code:** add a helper, interface, or option only when it removes current complexity, centralizes a shared rule, or serves a real boundary. No speculative configuration, extension points, pass-through layers, or unrelated refactors.
+- **Names over comments:** precise names and readable control flow, no dense one-liners; brief rationale only where the code cannot show it. Keep required docs, safety invariants, and directives.
+- **No extra documents:** no `SUMMARY.md`, `CHANGES.md`, or plan file unless asked.
 
-Skip this step when nothing is ambiguous. Otherwise ask **at most 3 questions in one batch**, each with a recommended answer the user can approve in one word, and only about what changes the implementation:
+## Step 1 — Clarify (only if needed)
 
-- Concerns that fork the design: "should this be per-user or global?"
-- Tool/library choices when the codebase shows no precedent
-- Behavior at a boundary the request doesn't cover: "what happens on duplicate?"
+Skip when nothing is ambiguous. Otherwise ask **at most 3 questions in one batch**, each with a recommended answer the user can approve in one word, and only about what changes the implementation: a design fork ("per-user or global?"), a tool or library choice with no precedent in the codebase, or boundary behavior the request doesn't cover ("what happens on duplicate?"). Look facts up in the code instead of asking; put obvious defaults in the plan's assumptions.
 
-Look up facts and conventions in the code instead of asking; put obvious defaults in the plan's assumptions; skip preferences that don't change the diff.
+## Step 2 — Plan, then go
 
-## Step 2 — Plan (one short in-chat message, then go)
-
-Consult the configured memory store for task-relevant lessons. If markdown is the chosen store and `docs/knowledge/INDEX.md` exists, read its index and only matching notes; do not duplicate retrieval across stores.
-
-Present a compact plan and **proceed straight to implementation** — the plan is a courtesy heads-up the user can interrupt, not a gate to wait on (unless the user or their setup requires plan approval):
+If repository or user instructions name a lessons store, or `docs/knowledge/INDEX.md` exists, consult it and read only the notes matching the task. Then post a plan of at most ~10 lines and **start implementing without waiting** — it is a heads-up the user can interrupt, not a gate (unless the user or their setup requires approval):
 
 ```
 Plan: <one-line goal>
@@ -35,22 +35,17 @@ Plan: <one-line goal>
 Assumptions: <anything you decided instead of asking>
 ```
 
-Keep it under ~10 lines: no alternatives-considered section, no risk matrix. Keep the plan in the conversation; write a plan file only when the user asks.
+No alternatives section, no risk matrix.
 
-## Step 3 — Implement, KISS
+## Step 3 — Implement
 
-- **Map the affected contract:** trace changed behavior through callers, exports, configuration, fixtures, and tests before picking the smallest implementation. Include necessary downstream updates; do not expand into unrelated cleanup.
-- **Explore cheaply:** locate code with targeted search and read the relevant ranges rather than whole files; batch independent searches and reads into one turn; don't re-read what is already in context.
-- **Use what fits already:** project utilities, standard-library/native features, and installed dependencies before custom code or a new package — chosen by required behavior and maintenance cost, not popularity or line count. Share code when meaning and ownership align; don't widen a private API or couple unrelated modules just to remove similar lines.
-- **Direct code first:** keep short, clear logic local. Add a helper, interface, or option only when it removes current complexity, centralizes a shared rule, or serves a real boundary; a single caller is neither a ban nor a reason to abstract. No speculative configuration, extension points, or pass-through layers.
-- **No silent scope cuts:** implement every part of the plan. If a part turns out harder than planned, or a `TODO`/stub is tempting — **stop and tell the user first**; never commit a placeholder or "not implemented" path the user hasn't approved. Approved leftovers go under "Deferred" in the final report.
-- **Out-of-project files are read-only:** paths outside the repo root are inputs, never targets — copy what you need into the project and adapt the copy. Editing outside the repo requires explicit user confirmation.
-- **Names over comments:** precise names and readable control flow, without dense one-liners; skip obvious comments and keep necessary rationale brief and beside the code. Preserve required docs, safety invariants, and directives.
-- **Tests:** follow the project's existing setup — use the smallest stable seam that proves the changed behavior, plus relevant failure cases. Pure logic can use unit tests; storage/protocol contracts need integration checks. Reproduce bugs before fixing them, and keep a regression test. Existing coverage can suffice; do not add tests for trivial edits merely to meet a quota. Take expected values from the spec, never recomputed by the code under test. Load `dev-testing` only when the project has no test pattern for this kind of code.
+- Read targeted ranges, not whole files; batch independent searches and reads into one turn and do not re-read what is already in context.
+- If the change alters a signature, return or error shape, export, config key, persisted format, or behavior other callers rely on (defaults, ordering, side effects), find its callers, fixtures, and tests and include the necessary downstream updates.
+- **Tests:** follow the project's setup; use the smallest stable seam that proves the changed behavior, plus its relevant failure cases. Storage and protocol contracts need integration checks, not mocks. Reproduce a bug before fixing it and keep the regression test. Existing coverage can suffice; trivial edits need no new test. Take expected values from the spec, never recomputed by the code under test. Load `dev-testing` only when the project has no test pattern for this kind of code.
 
 ## Step 4 — Finish
 
-- Inspect the final scoped diff (including generated and agent-written changes) and `git status --short` for unnecessary layers, speculative code, and comment narration. Simplify within scope without weakening the contract or the tests.
-- Iterate with focused tests; after a fix, rerun the failed check and checks invalidated by the fix, then run required test and lint commands on the final state. Reuse results only while their inputs remain unchanged. Stop after acceptance and required checks pass; do not start another audit without new evidence. Keep output quiet (summary reporter or the failure tail) and give long commands enough timeout to finish in one call instead of polling. Fix what you broke. **Never delete, skip, weaken, or narrow a test to get green** — a test blocking you is a finding to raise with the user. No unrelated refactors, no dependencies beyond the plan.
-- Report in a few sentences: what changed, where, test results, and any "Deferred" items. **Do not** generate `SUMMARY.md`, `CHANGES.md`, or any doc file unless asked.
-- State material verification gaps; never present skipped checks as passes. Capture a `dev-knowledge` note only when a non-obvious pitfall surprised you and the project permits capture. No automatic review offer or extra workflow after completion.
+- Check what you wrote against the Rules: unnecessary layers, speculative code, comment narration, unplanned scope. Use what is already in context; read the diff only for files written by subagents, scripts, or code generators. Run `git status --short` once to catch stray debug, temp, or generated files. Simplify within scope without weakening the contract or the tests.
+- Iterate with focused checks; after the last edit, run the repository-required checks once and rerun a check only when its inputs changed since it passed. Keep output quiet (summary reporter or failure tail) and give long commands a timeout that lets them finish in one call. Fix what you broke. After two failed fixes for the same failure, stop patching and revisit the plan's assumption with the user.
+- Report in a few sentences: what changed and where, `Checks: <commands> — passed after last edit` (or the exact failure), checks that could not run, and any "Deferred" items. Never present a skipped check as a pass.
+- Write a `dev-knowledge` note only when a non-obvious pitfall surprised you and the project permits capture. No review offer or extra workflow after completion.

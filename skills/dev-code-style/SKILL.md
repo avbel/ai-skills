@@ -6,7 +6,7 @@ description: Compact, readable code with justified abstractions and sparse, purp
 # Code Style — Compact and Readable
 
 Write only what the task needs, with names and control flow a reader can understand directly. Compactness comes from removing unnecessary concepts and indirection; keep normal formatting and useful intermediate variables. Code explains **what**; comments preserve context the code cannot express.
-Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
+Part of the `dev-*` development-cycle skill set.
 
 ## Before Adding Code
 

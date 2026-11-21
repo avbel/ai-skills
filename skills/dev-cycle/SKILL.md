@@ -1,11 +1,11 @@
 ---
 name: dev-cycle
-description: Router and shared philosophy for the dev-* development-cycle skill set — picks the right workflow (lite feature, coordinated feature, problem solving, review, testing, debugging, knowledge capture) for the task at hand. Use when starting any development task and unsure which workflow fits, or when the user asks "what dev skills are available" or "how do we work here".
+description: Router for the dev-* development-cycle skill set — picks the right workflow (lite feature, coordinated feature, problem solving, review, testing, debugging, knowledge capture) for the task at hand. Use when starting any development task and unsure which workflow fits, or when the user asks "what dev skills are available" or "how do we work here".
 ---
 
 # Development Cycle — Router
 
-Pick **one primary workflow** per task from the table below, load that skill before starting the work (the Skill tool in Claude Code; read its `SKILL.md` elsewhere), and follow it — this router is not a workflow by itself. Choose from the table; do not open other workflow skills to compare them. Load supporting skills only when needed; `dev-code-style` supplies the shared code and comment guidance for implementation and review.
+Pick **one primary workflow** from the table, load that skill (the Skill tool in Claude Code; read its `SKILL.md` elsewhere), and follow it — this router is not a workflow by itself. Each workflow is self-contained: do not open other workflow skills to compare them, and load supporting skills only when the workflow names them.
 
 ## Routing
 
@@ -14,6 +14,7 @@ Pick **one primary workflow** per task from the table below, load that skill bef
 | Straightforward localized change with an obvious implementation | `dev-feature-lite` |
 | Coordinated scoped change where sequencing or contract alignment across behavioral surfaces needs a short in-chat plan | `dev-feature` |
 | Open problem, several viable approaches: "how should we…" | `dev-problem-solving` |
+| Queue of tasks or plan steps to run unattended: "do tasks 12–15", "execute the plan" | `dev-loop` |
 | "Review this / ready to merge?" | `dev-review` |
 | Bug resisting the first fix; "still broken", debugger setup | `dev-debug` |
 | Writing tests / "how to test this" | `dev-testing` |
@@ -23,19 +24,12 @@ Pick **one primary workflow** per task from the table below, load that skill bef
 
 Ambiguous between lite and coordinated feature work? Start with `dev-feature-lite`; escalate when code inspection finds sequencing or contract alignment across behavioral surfaces, a real design fork, a cross-cutting migration, or material risk. Ambiguous between a coordinated feature and problem-solving? Start with `dev-feature`; it escalates itself when it finds multiple viable architectures.
 
-## Shared Philosophy (applies inside every dev-* skill)
-
-1. **Cheapest sufficient process.** No plan for an obvious localized change; one in-chat plan for a coordinated feature. Neither feature workflow persists a planning document unless the user asks; deeper problem-solving follows its own solution-doc contract.
-2. **Small, readable implementation.** Reuse suitable project code, standard-library/native capabilities, or installed dependencies before adding custom machinery. Add abstractions only for current needs; use clear names and direct control flow, with brief comments only for context the code cannot express (see `dev-code-style`). Preserve the complete behavior and necessary safeguards; fewer lines alone is not success.
-3. **Ask only blockers and real forks.** Resolve facts from code, state safe assumptions, and never turn optional improvements into approval requests.
-4. **Evidence over vibes.** Read the code before proposing; reproduce before fixing; capture real API data before mocking.
-5. **Bounded feedback.** Change → focused check → diagnose failure → smallest correction. Stop when acceptance and required checks pass. Reuse unchanged evidence; a new edit invalidates checks of its affected behavior. After repeated failures without new evidence, revisit the hypothesis instead of trying another patch.
-6. **Targeted context.** Use the configured memory backend or an existing knowledge index; retrieve only task-relevant lessons. Load one primary workflow, conditional references only when triggered, and no repeated full-file/log dumps. Capture expensive lessons only when permitted (see `dev-knowledge`).
-7. **Files outside the project are read-only.** When the user attaches or points to a path outside the repo root (a sample, a reference implementation, a config from another project) — read it, quote it, copy it into the project if it's needed as a starting point, but **never edit the original**. If a task seems to require changing an out-of-project file, stop and confirm with the user first.
+In every workflow, repository instructions and project-specific skills take precedence over dev-* guidance, and files outside the repository are read-only unless the user confirms an edit.
 
 ## Typical Chains
 
 - Simple feature: `dev-feature-lite` with focused verification
 - Coordinated feature: `dev-feature` → `dev-review` when the user asks
-- Hard problem: `dev-problem-solving` → build (parallel agents for independent steps) → `dev-review` → `dev-knowledge`
+- Hard problem: `dev-problem-solving` → `dev-loop` (runs the build plan, ends with a review) → `dev-knowledge`
+- Several known tasks: `dev-loop`
 - Nasty bug: `dev-debug` → `dev-review` (the fix) → `dev-knowledge`

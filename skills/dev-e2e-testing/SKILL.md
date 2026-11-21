@@ -6,7 +6,7 @@ description: >-
 
 # E2E Testing — Production-Parity Tier
 
-Everything real except other people's clouds. Every dependency the code talks to in production runs locally as the **real engine** — real sockets, real wire protocols, real failure modes. Only external vendor APIs (things you cannot run locally) are mocked, and only at the HTTP boundary. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
+Everything real except other people's clouds. Every dependency the code talks to in production runs locally as the **real engine** — real sockets, real wire protocols, real failure modes. Only external vendor APIs (things you cannot run locally) are mocked, and only at the HTTP boundary. Part of the `dev-*` development-cycle skill set.
 
 **This is a separate, slower tier — not the regular suite.** These tests do NOT run on every `test` invocation, pre-commit, or PR-fast-path. They get their own command (`test:e2e` / `cargo test --features e2e` / a `-tags e2e` build tag) and run on demand and in nightly/pre-release CI. The everyday integration suite is `dev-testing`'s job; never make developers pay the container-startup tax for a parser change.
 

@@ -5,7 +5,7 @@ description: Testing strategy for changed behavior — stable seams, real-engine
 
 # Testing Strategy
 
-Bias toward **integration tests** — they verify what users actually experience and survive refactoring. Unit tests are for pure logic with many branches. Part of the `dev-*` development-cycle skill set (see `dev-cycle`).
+Bias toward **integration tests** — they verify what users actually experience and survive refactoring. Unit tests are for pure logic with many branches. Part of the `dev-*` development-cycle skill set.
 
 This skill covers the **everyday suite** that runs on every `test` invocation. For the heavier production-parity tier — real brokers, local blockchains, real sockets, network-fault injection, run on demand rather than per commit — see `dev-e2e-testing`.
 

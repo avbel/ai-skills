@@ -13,8 +13,9 @@ Review the requested change and the connected behavior it can break. Correctness
 - Without a target, use staged + unstaged + untracked changes when dirty. Otherwise use the branch diff from its actual PR/tracking base; if unavailable, resolve `origin/HEAD`, then `main`/`master`. Use merge-base comparison for branch reviews. If the result is empty or the base ambiguous, say so; do not silently review an arbitrary commit.
 - For staged/commit/PR reviews, read source at that target revision (index for staged), not a newer working-tree version. Checks run against a different state are explicitly limited evidence; use an isolated snapshot when exact-state execution is needed, preserving user changes.
 - Read the diff, then trace changed contracts through callers, callees, types, config, exports, and tests. Expand only where a reachable dependency can affect the result; do not audit the whole repository.
-- Establish relevant runtime assumptions from deployment/config/docs: process count, input sizes, trust boundaries, persistence. Label unknowns; do not invent scale requirements.
-- Use targeted searches and source ranges. Reuse evidence already in context; inspect the final changed state after fixes. Do not load other review skills merely because they are installed.
+- When the change touches concurrency, persistence, retries, or input-dependent sizes, establish the runtime assumptions it relies on from deployment/config/docs: process count, input sizes, persistence. Label unknowns; do not invent scale requirements.
+- Use targeted searches and source ranges. Reuse evidence already in context; inspect the final changed state after fixes. Do not load other globally installed review skills merely because they are installed.
+- If the repository provides its own review skill or checklist, apply it to the axes it covers and use section 2 only for the axes it omits; do not review the same axis twice.
 
 ## 2. Review the Applicable Risks
 
@@ -38,7 +39,7 @@ Review the requested change and the connected behavior it can break. Correctness
 
 For each finding confirm the reachable trigger, actual behavior, violated expectation, and smallest sufficient fix. Discard findings disproved by surrounding code. Distinguish hard violations from judgment calls; avoid duplicating compiler/linter findings already reported.
 
-Run checks needed to settle uncertainty and repository-required review checks. Record exact commands/results, including unavailable checks. Reuse unchanged results; after fixes rerun checks of affected behavior. Stop when the scoped risks are resolved, not after an arbitrary number of review passes.
+Run a check only to settle a specific finding, when repository instructions require checks for reviews, or when the verdict depends on a result that does not yet exist for this revision. Reuse results already in context or reported by CI for the same revision instead of rerunning them. Record exact commands/results, including unavailable checks; after fixes rerun checks of affected behavior. Stop when the scoped risks are resolved, not after an arbitrary number of review passes.
 
 Use separate reviewers only when required or when a large change has independent risk areas worth the extra context cost. Give each the exact scope, contract, relevant paths, and verification evidence rather than the entire conversation. Consolidate duplicate findings and rank by severity. A review of fixes covers changed areas and invalidated assumptions, not a repeat of every completed axis.
 
