@@ -11,7 +11,7 @@ Baseline is pnpm 12 — a native executable that needs no Node.js to run and dow
 
 - Pin pnpm in the root `package.json`: `"packageManager": "pnpm@12.4.1"` (exact) or `devEngines.packageManager` (a range, with `onFail: download`). pnpm switches to the pin on first use; `pnpm self-update 12` updates the binary and the pin together.
 - Every project setting lives in `pnpm-workspace.yaml` (camelCase keys), committed with the repo. A `pnpm` field in `package.json` is ignored with a warning. `.npmrc` holds only auth and registry settings.
-- Environment variables: `pnpm_config_*` (or `PNPM_CONFIG_*`). pnpm does not read `npm_config_*`.
+- Environment variables: `pnpm_config_*` (or `PNPM_CONFIG_*`). pnpm does not read other `npm_config_*` variables (exceptions: `NPM_CONFIG_WORKSPACE_DIR`, `npm_config_userconfig`, and URL-scoped auth tokens).
 - Global config is `~/.config/pnpm/config.yaml` on Linux (`$XDG_CONFIG_HOME/pnpm/config.yaml`, `~/Library/Preferences/pnpm/config.yaml` on macOS, `%LOCALAPPDATA%\pnpm\config\config.yaml` on Windows). Project-only settings (`nodeLinker`, `hoistPattern`, `publicHoistPattern`, `shamefullyHoist`, `linkWorkspacePackages`) belong in `pnpm-workspace.yaml` so every machine installs the same layout.
 - Run one-off tools with `pnx <pkg>` (alias `pnpm dlx`) — it honors catalogs and the project's security policies. Avoid `npx`/`npm install` in a pnpm repo; guard against them with a `"preinstall": "npx only-allow pnpm"` script (pnpm skips exactly that string).
 
@@ -33,7 +33,7 @@ Baseline is pnpm 12 — a native executable that needs no Node.js to run and dow
 | `pnpm ci` | Verify the lockfile is current, then clean + frozen install — for CI |
 | `pnpm store prune` | Drop unreferenced store packages and stale metadata; safe to run occasionally |
 
-A script whose name matches a built-in command (`clean`, `deploy`, …) shadows it; use `pnpm pm <name>` (e.g. `pnpm pm clean`) to run the built-in regardless.
+A script named `clean`/`purge`, `setup`, `deploy`, `rebuild`/`rb`, or `tasks` shadows that built-in — `pnpm <name>` runs the script; `pnpm pm <name>` (e.g. `pnpm pm clean`) runs the built-in regardless.
 
 ## Security defaults (check these before debugging a "broken" install)
 
@@ -158,7 +158,7 @@ Copies the files `pnpm pack` would include plus an isolated, self-contained `nod
 
 ## CI
 
-- GitHub Actions: use the `pnpm/setup` action — it reads the `packageManager` pin, installs the runtime, runs install, and with `cache: true` caches the store.
+- GitHub Actions: use the `pnpm/setup` action — it reads the `packageManager` pin, installs the runtime, runs install, and with `cache: true` caches the store. (This supersedes `pnpm/action-setup` recipes pinned to pnpm 9, like the one in `github-actions-ci`.)
 - Other systems: `curl -fsSL https://get.pnpm.io/ | sh -` installs a self-contained pnpm that follows the project pin; export `PNPM_HOME` and put `$PNPM_HOME/bin` on `PATH`. Container jobs can start from `ghcr.io/pnpm/pnpm`.
 - pnpm switches to frozen-lockfile automatically when it detects CI; `pnpm ci` adds a clean first. A lockfile written by a newer pnpm major errors instead of being silently rewritten.
 - Cache the store (`pnpm store path`) and the metadata cache (`pnpm cache path`) — the metadata cache also skips re-checking an unchanged lockfile against supply-chain policies. Never let untrusted jobs write a store or cache that trusted jobs restore.

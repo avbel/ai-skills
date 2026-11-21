@@ -45,7 +45,7 @@ allowBuilds:
 | `"bar": "workspace:foo@*"` | aliased link | `"bar": "npm:foo@<version>"` |
 
 - Only `workspace:` guarantees a local link. `linkWorkspacePackages: true` also links plain ranges that match a local project (uncertainty: a non-matching registry version installs silently); `deep` extends linking into subdependencies. Prefer the protocol, leave the setting `false`.
-- `saveWorkspaceProtocol: rolling` (default) makes `pnpm add foo` inside the workspace save `workspace:*` (`true` saves `workspace:^1.2.3`-style pins, `false` saves plain ranges — don't).
+- `saveWorkspaceProtocol: rolling` (default) makes `pnpm add foo` inside the workspace save a rolling spec — `workspace:*` with the default empty `savePrefix`, or `workspace:^`/`workspace:~` when `savePrefix` is `^`/`~` (`true` saves pinned specs like `workspace:^1.2.3`, `false` saves plain ranges — don't).
 - `preferWorkspacePackages: true` prefers local packages even when the registry has a newer version.
 
 ## Injected dependencies (per-consumer peer bindings)
