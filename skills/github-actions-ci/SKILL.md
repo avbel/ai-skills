@@ -58,36 +58,38 @@ First-party `actions/*` are lower risk; third-party actions (`pnpm/*`,
 
 ## Node + pnpm
 
-Install order matters: **pnpm must exist before `setup-node`**, because
-`cache: pnpm` shells out to `pnpm store path` to locate the cache. Reverse the
-order and the cache step fails. Keep versions in repo files (`.nvmrc` and the
-`packageManager` field of `package.json`) so the workflow stays version-agnostic.
+One action does it all: `pnpm/setup` installs the pnpm version pinned in
+`package.json` (`packageManager` or `devEngines.packageManager`), uses it to
+install the requested Node.js runtime, runs `pnpm install`, and with
+`cache: true` caches the pnpm store. No separate `actions/setup-node` step, and
+the workflow never needs updating when the pin changes.
 
 ```yaml
-# package.json → "packageManager": "pnpm@9.x.x"
-# .nvmrc       → 24
+# package.json → "packageManager": "pnpm@12.x.y"
 
 steps:
   - uses: actions/checkout@v4
     with:
       persist-credentials: false
 
-  - uses: pnpm/action-setup@v4   # reads the version from packageManager
-
-  - uses: actions/setup-node@v4
+  # third-party action: pin by SHA (see above)
+  - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
     with:
-      node-version-file: .nvmrc
-      cache: pnpm                 # caches the pnpm content-addressable store
+      runtime: node@24
+      cache: true
+      # install: false   # run pnpm install yourself with flags instead
 
-  - run: pnpm install --frozen-lockfile
   - run: pnpm lint
   - run: pnpm test
 ```
 
-- `--frozen-lockfile` fails the build if `pnpm-lock.yaml` is out of date —
-  exactly what you want in CI; never let CI silently resolve a different tree.
-- `cache: pnpm` keys on `pnpm-lock.yaml`, so the cache invalidates only when
-  dependencies actually change.
+- pnpm detects CI and switches to frozen-lockfile automatically. An explicit
+  `pnpm install --frozen-lockfile` fails the build if `pnpm-lock.yaml` is out
+  of date — never let CI silently resolve a different tree.
+- Add a `version` input if `package.json` declares neither package-manager
+  field.
+- pnpm 12 is self-contained — it needs no Node.js image or runtime step and
+  downloads the Node.js it runs.
 
 ## Rust
 

@@ -158,7 +158,7 @@ Copies the files `pnpm pack` would include plus an isolated, self-contained `nod
 
 ## CI
 
-- GitHub Actions: use the `pnpm/setup` action — it reads the `packageManager` pin, installs the runtime, runs install, and with `cache: true` caches the store. (This supersedes `pnpm/action-setup` recipes pinned to pnpm 9, like the one in `github-actions-ci`.)
+- GitHub Actions: use the `pnpm/setup` action — it reads the `packageManager` pin, installs the runtime, runs install, and with `cache: true` caches the store. (This supersedes `pnpm/action-setup` recipes pinned to pnpm 9.)
 - Other systems: `curl -fsSL https://get.pnpm.io/ | sh -` installs a self-contained pnpm that follows the project pin; export `PNPM_HOME` and put `$PNPM_HOME/bin` on `PATH`. Container jobs can start from `ghcr.io/pnpm/pnpm`.
 - pnpm switches to frozen-lockfile automatically when it detects CI; `pnpm ci` adds a clean first. A lockfile written by a newer pnpm major errors instead of being silently rewritten.
 - Cache the store (`pnpm store path`) and the metadata cache (`pnpm cache path`) — the metadata cache also skips re-checking an unchanged lockfile against supply-chain policies. Never let untrusted jobs write a store or cache that trusted jobs restore.
