@@ -167,6 +167,7 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | `opentelemetry-js` | OTel traces, metrics, SDK, auto-instrumentation, exporters |
 | `parquet-js` | File structure, encodings, compression, hyparquet, DuckDB |
 | `pino-js` | Log levels, child loggers, redaction, transports |
+| `pnpm-js` | pnpm 12 commands, monorepo workspaces, catalogs, filters, task orchestration, deploy |
 | `postgres-js` | Tagged templates, transactions, dynamic SQL, cursors, TypeScript |
 
 ### JavaScript / TypeScript — language & patterns
