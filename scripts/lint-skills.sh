@@ -17,6 +17,7 @@ CROSSREF_ALLOWLIST=(
   "core-js"      # npm polyfill package
   "rust-rocksdb" # RocksDB Rust crate
   "rust-src"     # rustup component
+  "dev-dependencies" # Cargo manifest section, not a skill
 )
 
 all_skills=()

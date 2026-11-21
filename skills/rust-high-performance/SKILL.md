@@ -1,6 +1,6 @@
 ---
 name: rust-high-performance
-description: Write and audit the fastest Rust — measure-first profiling, release build config (LTO, codegen-units, PGO, allocators), inlining since 1.75, allocation and layout reduction, readable auto-vectorization and SIMD dispatch, locks and atomics, perf features through Rust 1.99, tokio/rayon/serde rules, binary size and compile times. Use for "make this Rust faster", "optimize hot loop", "reduce allocations", "blazing fast Rust", "audit Rust performance".
+description: Write and audit the fastest Rust — measure-first profiling, release build config (LTO, codegen-units, PGO, allocators), inlining, allocation and layout reduction, auto-vectorization and SIMD dispatch, locks and atomics, tokio/rayon/serde rules, binary size, compile times. Use for "make this Rust faster", "optimize hot loop", "reduce allocations", "blazing fast Rust", "audit Rust performance".
 ---
 
 # High-Performance Rust
