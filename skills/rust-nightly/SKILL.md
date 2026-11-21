@@ -9,7 +9,7 @@ Use this skill when a Rust project uses `+nightly`, `#![feature(...)]`, unstable
 
 ## Latest Checked Inventory
 
-- Latest checked: Rust nightly docs `1.98.0-nightly (1f087276b 2026-06-13)`, checked `2026-06-14`.
+- Latest checked: Rust nightly docs `1.102.0-nightly`, checked `2026-11-21`. Stable is 1.100.0 (2026-11-12); features stabilized in 1.99/1.100 are covered by the `rust-1-99` and `rust-1-100` skills — check those before reaching for a feature gate.
 - Primary sources:
   - Unstable Book: <https://doc.rust-lang.org/nightly/unstable-book/>
   - Nightly `std`: <https://doc.rust-lang.org/nightly/std/>
@@ -63,14 +63,13 @@ RUSTFLAGS="-Zallow-features=f16,f128,portable_simd" \
 | Area | Feature gates | Use when | Notes |
 |---|---|---|---|
 | New floats | `f16`, `f128` | Half/quad precision numeric work | Experimental primitive types; verify FFI, serialization, and target codegen. |
-| Never type | `never_type` | Explicit `!` in generics such as `Result<T, !>` | 2024 edition changes never-type fallback toward `!`; test inference edge cases. |
 | Const generics | `min_generic_const_args`, `generic_const_args`, `generic_const_exprs`, `adt_const_params`, `generic_const_items` | Type-level sizes and compile-time values | `generic_const_exprs` is incomplete; expect diagnostics and syntax churn. |
 | Coroutines | `coroutines`, `coroutine_trait`, `stmt_expr_attributes` | Resumable functions with `yield` | Current spelling is coroutines; old posts may call this generators. |
 | Error flow | `try_blocks`, `yeet_expr` | Scoped `?` blocks or experimental early-exit syntax | `yeet_expr` is intentionally placeholder syntax. |
 | Trait/type abstraction | `trait_alias`, `type_alias_impl_trait`, `impl_trait_in_assoc_type`, `auto_traits`, `negative_impls` | Hide concrete types or express marker relationships | Be explicit in public API docs; object-safety and coherence can shift. |
 | Struct ergonomics | `default_field_values`, `type_changing_struct_update`, `offset_of_enum`, `offset_of_slice` | Defaults, layout/reflection, struct update experiments | Do not promise layout stability unless using `repr(...)` and documenting invariants. |
 | Pattern matching | `deref_patterns`, `box_patterns`, `half_open_range_patterns_in_slices`, `postfix_match`, `loop_match` | Matching smart pointers, slices, or expression-postfix style | `box_patterns` is superseded by `deref_patterns`. |
-| FFI/ABI | `c_variadic`, `ffi_const`, `ffi_pure`, `explicit_extern_abis`, `transparent_unions`, `abi_vectorcall`, `abi_ptx`, `abi_msp430_interrupt`, `abi_cmse_nonsecure_call` | C/foreign ABI interop | Keep per-target ABI tests; unstable ABI gates are platform-sensitive. |
+| FFI/ABI | `ffi_const`, `ffi_pure`, `explicit_extern_abis`, `transparent_unions`, `abi_vectorcall`, `abi_ptx`, `abi_msp430_interrupt`, `abi_cmse_nonsecure_call` | C/foreign ABI interop | Keep per-target ABI tests; unstable ABI gates are platform-sensitive. C-variadic *definitions* are stable since 1.99 (`rust-1-99`); `extern "custom"` stable since 1.100. |
 | Inline asm | `asm_experimental_arch`, `asm_experimental_reg`, `asm_goto_with_outputs`, `asm_unwind` | Low-level target-specific code | Gate by `cfg(target_arch)` and test generated assembly. |
 | Conditional compilation | `cfg_version`, `cfg_sanitize`, `cfg_target_object_format`, `doc_cfg`, `doc_notable_trait` | Version/target/doc-aware APIs | Prefer stable `cfg` where enough; unstable cfg keys require nightly docs. |
 | Compiler integration | `rustc_private`, `rustc_attrs`, `lang_items`, `intrinsics`, `compiler_builtins` | rustc/std/compiler-plugin work | Internal-only for most application crates. |
@@ -79,7 +78,7 @@ RUSTFLAGS="-Zallow-features=f16,f128,portable_simd" \
 
 | Area | Feature gates / modules | What it provides | Guidance |
 |---|---|---|---|
-| Allocation | `allocator_api`, `std::alloc` | Per-collection custom allocators | Check current rustdoc; older docs may use obsolete `AllocRef` terminology. |
+| Allocation | `allocator_api`, `std::alloc` | Per-collection custom allocators | Core `Allocator` trait is stable since 1.100 for `Vec`/`Box` (see `rust-1-100`); the remaining surface (other collections, pointer types) is still gated. Check current rustdoc; older docs may use obsolete `AllocRef` terminology. |
 | Async traits | `async_fn_traits`, `fn_traits`, `unboxed_closures` | Implement closure-like and async closure-like traits | Prefer stable async traits/closures when possible; keep minimal examples compiling. |
 | Async iteration | `async_iterator`, `async_iter_from_iter`, `std::async_iter` | `AsyncIterator`, `IntoAsyncIterator`; `from_iter` needs `async_iter_from_iter` | Poll-based API; adapters and `next` ergonomics may change. |
 | Portable SIMD | `portable_simd`, `std::simd` | `Simd<T, N>`, `Mask`, vector aliases | Semantics are portable; performance and subnormal float behavior can vary on older archs. |
@@ -99,7 +98,7 @@ RUSTFLAGS="-Zallow-features=f16,f128,portable_simd" \
 |---|---|---|---|---|
 | `f16` / `std::f16` | `f16` | IEEE 754 binary16 primitive and constants | ML tensors, graphics formats, compact numeric storage | Check hardware support, ABI, serialization, and math precision. |
 | `f128` / `std::f128` | `f128` | IEEE 754 binary128 primitive and constants | High-precision numeric experiments | Often slower/software-backed; avoid FFI assumptions. |
-| `!` | `never_type` | Uninhabited primitive type | Infallible errors, diverging APIs, exhaustive generic matches | Explicit use still nightly; type fallback/inference can surprise older editions. |
+| `!` | — | Uninhabited primitive type | Infallible errors, diverging APIs, exhaustive generic matches | **Stable since 1.100** — nameable in any type position; `Infallible` is now an alias of `!` (see `rust-1-100`). |
 | `std::range::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive}` | `new_range` | Replacement range structs | Future edition range semantics and slicing experiments | Legacy `std::ops` range types remain the stable default. |
 | `std::bstr::{ByteStr, ByteString}` | `bstr` | Borrowed/owned human-readable byte strings | File paths, logs, protocol text that may be non-UTF-8 | API is experimental; compare against `bstr` crate for stable needs. |
 | `std::simd::{Simd<T, N>, Mask<_, N>}` | `portable_simd` | Lane vectors and masks | Portable vectorized numeric code | Measure on every target; scalar fallback is allowed. |
@@ -120,7 +119,7 @@ RUSTFLAGS="-Zallow-features=f16,f128,portable_simd" \
 | Metadata | `-Z unit-graph`, `cargo rustc --print ... -Z unstable-options`, `-Z build-analysis` | Tooling that needs Cargo's internal graph or build metrics. |
 | Cache/control | `-Z gc`, `-Z checksum-freshness`, `-Z fine-grain-locking`, `-Z no-index-update` | Build-cache experiments and offline/index behavior. |
 | Single-file packages | `-Z script` | Cargo-managed single-file `.rs` scripts. |
-| Manifest extensions | `cargo-features = [...]`; `[lints.cargo]` uses `-Zcargo-lints` | `codegen-backend`, `trim-paths`, `path-bases`, `unstable-editions`, artifact dependencies, Cargo lint configuration. |
+| Manifest extensions | `cargo-features = [...]` | `codegen-backend`, `trim-paths`, `path-bases`, `unstable-editions`, artifact dependencies. The `[lints.cargo]` lint system (`cargo::unused_dependencies`, etc.) is stable since 1.100 — no `-Zcargo-lints` needed. |
 
 ## rustc Nightly Flags
 
@@ -140,9 +139,11 @@ Use `rustc +nightly -Z help` and `cargo +nightly rustc -- -Z help` for the curre
 
 | Item | Status | Use instead / rule |
 |---|---|---|
-| `box_patterns` | Superseded | Use `deref_patterns` for smart-pointer pattern matching experiments. |
+| `never_type` gate | Stabilized 1.100 | `!` is stable everywhere; pre-2024 editions also fall back to `!` now. See `rust-1-100`. |
+| `c_variadic` gate | Stabilized 1.99 | Define C variadics with `unsafe extern "C" fn f(mut args: ...) -> T` + `VaList::next_arg`. See `rust-1-99`. |
+| `box_patterns` | Removed from the grammar in 1.100 (syntax error) | Use `deref_patterns` (nightly) or explicit matching. |
 | `try!` macro | Deprecated | Use `?`. |
-| `std::{i8,i16,i32,i64,i128,isize,u8,u16,u32,u64,u128,usize}` constants modules | Deprecation planned | Use primitive associated constants, e.g. `i32::MAX`, `usize::BITS`. |
+| `std::{i8,i16,i32,i64,i128,isize,u8,u16,u32,u64,u128,usize}` constants modules | Fully deprecated since 1.99 | Use primitive associated constants, e.g. `i32::MAX`, `usize::BITS`. |
 | `std::range::legacy` | Compatibility layer | Use stable `std::ops` ranges, or `std::range` only when explicitly testing `new_range`. |
 | `extern crate test` / `#[bench]` | Unstable legacy benchmarking | Use `divan` or Criterion unless you need libtest compatibility. |
 | `RUSTC_BOOTSTRAP=1` | Bootstrap escape hatch | Use `+nightly`; if absolutely required for rustc/std work, scope to `RUSTC_BOOTSTRAP=crate_name`. |
@@ -172,15 +173,15 @@ Tier 1 targets are guaranteed to build and pass automated tests. Host-tools targ
 
 Tier 2 targets are guaranteed to build, but tests may not run on every change. These also build host tools:
 
-`aarch64-pc-windows-gnullvm`, `aarch64-unknown-freebsd`, `aarch64-unknown-linux-musl`, `aarch64-unknown-linux-ohos`, `arm-unknown-linux-gnueabi`, `arm-unknown-linux-gnueabihf`, `armv7-unknown-linux-gnueabihf`, `armv7-unknown-linux-ohos`, `loongarch64-unknown-linux-gnu`, `loongarch64-unknown-linux-musl`, `i686-pc-windows-gnu`, `powerpc-unknown-linux-gnu`, `powerpc64-unknown-linux-gnu`, `powerpc64-unknown-linux-musl`, `powerpc64le-unknown-linux-gnu`, `powerpc64le-unknown-linux-musl`, `riscv64gc-unknown-linux-gnu`, `s390x-unknown-linux-gnu`, `x86_64-apple-darwin`, `x86_64-pc-windows-gnullvm`, `x86_64-unknown-freebsd`, `x86_64-unknown-illumos`, `x86_64-unknown-linux-musl`, `x86_64-unknown-linux-ohos`, `x86_64-unknown-netbsd`, `x86_64-pc-solaris`, `sparcv9-sun-solaris`.
+`aarch64-pc-windows-gnullvm`, `aarch64-unknown-freebsd`, `aarch64-unknown-linux-musl`, `aarch64-unknown-linux-ohos`, `arm-unknown-linux-gnueabi`, `arm-unknown-linux-gnueabihf`, `armv7-unknown-linux-gnueabihf`, `armv7-unknown-linux-ohos`, `loongarch64-unknown-linux-gnu`, `loongarch64-unknown-linux-musl`, `powerpc-unknown-linux-gnu`, `powerpc64-unknown-linux-gnu`, `powerpc64-unknown-linux-musl`, `powerpc64le-unknown-linux-gnu`, `powerpc64le-unknown-linux-musl`, `riscv64gc-unknown-linux-gnu`, `riscv64-unknown-linux-musl` (promoted 1.99), `s390x-unknown-linux-gnu`, `x86_64-apple-darwin`, `x86_64-pc-windows-gnullvm`, `x86_64-unknown-freebsd`, `x86_64-unknown-illumos`, `x86_64-unknown-linux-musl`, `x86_64-unknown-linux-ohos`, `x86_64-unknown-netbsd`, `x86_64-pc-solaris`, `sparcv9-sun-solaris`. Note: `i686-pc-windows-gnu` moved to Tier 2 *without* host tools in 1.100.
 
 ### Tier 2 without host tools
 
-These are build targets only. Common groups include Apple mobile/vision/watch targets, Android, Fuchsia, UEFI, bare-metal ARM/RISC-V/thumb targets, CUDA `nvptx64-nvidia-cuda`, WebAssembly (`wasm32-unknown-unknown`, `wasm32-wasip1`, `wasm32-wasip1-threads`, `wasm32-wasip2`, `wasm32v1-none`), Redox, SGX, and sanitizer Linux targets.
+These are build targets only. Common groups include Apple mobile/vision/watch targets, Android, Fuchsia, UEFI, bare-metal ARM/RISC-V/thumb targets, CUDA `nvptx64-nvidia-cuda`, WebAssembly (`wasm32-unknown-unknown`, `wasm32-wasip1`, `wasm32-wasip1-threads`, `wasm32-wasip2`, `wasm32-wasip3` (Tier 2 since 1.100), `wasm32v1-none`), Redox, SGX, and sanitizer Linux targets.
 
 Full current Tier 2 no-host triples from the checked docs:
 
-`aarch64-apple-ios`, `aarch64-apple-ios-macabi`, `aarch64-apple-ios-sim`, `aarch64-apple-tvos`, `aarch64-apple-tvos-sim`, `aarch64-apple-visionos`, `aarch64-apple-visionos-sim`, `aarch64-apple-watchos`, `aarch64-apple-watchos-sim`, `aarch64-linux-android`, `aarch64-unknown-fuchsia`, `aarch64-unknown-none`, `aarch64-unknown-none-softfloat`, `aarch64-unknown-uefi`, `arm-linux-androideabi`, `arm-unknown-linux-musleabi`, `arm-unknown-linux-musleabihf`, `arm64ec-pc-windows-msvc`, `armv5te-unknown-linux-gnueabi`, `armv5te-unknown-linux-musleabi`, `armv7-linux-androideabi`, `armv7-unknown-linux-gnueabi`, `armv7-unknown-linux-musleabi`, `armv7-unknown-linux-musleabihf`, `armv7a-none-eabi`, `armv7a-none-eabihf`, `armv7r-none-eabi`, `armv7r-none-eabihf`, `armv8r-none-eabihf`, `thumbv7a-none-eabi`, `thumbv7a-none-eabihf`, `thumbv7r-none-eabi`, `thumbv7r-none-eabihf`, `thumbv8r-none-eabihf`, `i586-unknown-linux-gnu`, `i586-unknown-linux-musl`, `i686-linux-android`, `i686-pc-windows-gnullvm`, `i686-unknown-freebsd`, `i686-unknown-linux-musl`, `i686-unknown-uefi`, `loongarch64-unknown-none`, `loongarch64-unknown-none-softfloat`, `nvptx64-nvidia-cuda`, `riscv32i-unknown-none-elf`, `riscv32im-unknown-none-elf`, `riscv32imac-unknown-none-elf`, `riscv32imafc-unknown-none-elf`, `riscv32imc-unknown-none-elf`, `riscv64a23-unknown-linux-gnu`, `riscv64gc-unknown-linux-musl`, `riscv64gc-unknown-none-elf`, `riscv64im-unknown-none-elf`, `riscv64imac-unknown-none-elf`, `sparc64-unknown-linux-gnu`, `s390x-unknown-none-softfloat`, `thumbv6m-none-eabi`, `thumbv7em-none-eabi`, `thumbv7em-none-eabihf`, `thumbv7m-none-eabi`, `thumbv7neon-linux-androideabi`, `thumbv7neon-unknown-linux-gnueabihf`, `thumbv8m.base-none-eabi`, `thumbv8m.main-none-eabi`, `thumbv8m.main-none-eabihf`, `wasm32-unknown-emscripten`, `wasm32-unknown-unknown`, `wasm32-wasip1`, `wasm32-wasip1-threads`, `wasm32-wasip2`, `wasm32v1-none`, `x86_64-apple-ios`, `x86_64-apple-ios-macabi`, `x86_64-fortanix-unknown-sgx`, `x86_64-linux-android`, `x86_64-unknown-linux-gnuasan`, `x86_64-unknown-linux-gnumsan`, `x86_64-unknown-linux-gnutsan`, `x86_64-unknown-fuchsia`, `x86_64-unknown-linux-gnux32`, `x86_64-unknown-none`, `x86_64-unknown-redox`, `x86_64-unknown-uefi`.
+`aarch64-apple-ios`, `aarch64-apple-ios-macabi`, `aarch64-apple-ios-sim`, `aarch64-apple-tvos`, `aarch64-apple-tvos-sim`, `aarch64-apple-visionos`, `aarch64-apple-visionos-sim`, `aarch64-apple-watchos`, `aarch64-apple-watchos-sim`, `aarch64-linux-android`, `aarch64-unknown-fuchsia`, `aarch64-unknown-none`, `aarch64-unknown-none-softfloat`, `aarch64-unknown-uefi`, `arm-linux-androideabi`, `arm-unknown-linux-musleabi`, `arm-unknown-linux-musleabihf`, `arm64ec-pc-windows-msvc`, `armv5te-unknown-linux-gnueabi`, `armv5te-unknown-linux-musleabi`, `armv7-linux-androideabi`, `armv7-unknown-linux-gnueabi`, `armv7-unknown-linux-musleabi`, `armv7-unknown-linux-musleabihf`, `armv7a-none-eabi`, `armv7a-none-eabihf`, `armv7r-none-eabi`, `armv7r-none-eabihf`, `armv8r-none-eabihf`, `thumbv7a-none-eabi`, `thumbv7a-none-eabihf`, `thumbv7r-none-eabi`, `thumbv7r-none-eabihf`, `thumbv8r-none-eabihf`, `i586-unknown-linux-gnu`, `i586-unknown-linux-musl`, `i686-linux-android`, `i686-pc-windows-gnu`, `i686-pc-windows-gnullvm`, `i686-unknown-freebsd`, `i686-unknown-linux-musl`, `i686-unknown-uefi`, `loongarch64-unknown-none`, `loongarch64-unknown-none-softfloat`, `nvptx64-nvidia-cuda`, `riscv32i-unknown-none-elf`, `riscv32im-unknown-none-elf`, `riscv32imac-unknown-none-elf`, `riscv32imafc-unknown-none-elf`, `riscv32imc-unknown-none-elf`, `riscv64a23-unknown-linux-gnu`, `riscv64gc-unknown-linux-musl`, `riscv64gc-unknown-none-elf`, `riscv64im-unknown-none-elf`, `riscv64imac-unknown-none-elf`, `sparc64-unknown-linux-gnu`, `s390x-unknown-none-softfloat`, `thumbv6m-none-eabi`, `thumbv7em-none-eabi`, `thumbv7em-none-eabihf`, `thumbv7m-none-eabi`, `thumbv7neon-linux-androideabi`, `thumbv7neon-unknown-linux-gnueabihf`, `thumbv8m.base-none-eabi`, `thumbv8m.main-none-eabi`, `thumbv8m.main-none-eabihf`, `wasm32-unknown-emscripten`, `wasm32-unknown-unknown`, `wasm32-wasip1`, `wasm32-wasip1-threads`, `wasm32-wasip2`, `wasm32-wasip3`, `wasm32v1-none`, `x86_64-apple-ios`, `x86_64-apple-ios-macabi`, `x86_64-fortanix-unknown-sgx`, `x86_64-linux-android`, `x86_64-unknown-linux-gnuasan`, `x86_64-unknown-linux-gnumsan`, `x86_64-unknown-linux-gnutsan`, `x86_64-unknown-fuchsia`, `x86_64-unknown-linux-gnux32`, `x86_64-unknown-none`, `x86_64-unknown-redox`, `x86_64-unknown-uefi`.
 
 ### Tier 3
 

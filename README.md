@@ -133,6 +133,8 @@ Or drop the file directly — claude.ai accepts markdown uploads.
 | Skill | Covers |
 |-------|--------|
 | `rust-conventions` | Rust 2024 naming, ownership, error handling, traits, iterators, concurrency |
+| `rust-1-99` | C-variadic fns, raw-pointer layout, boxed-array iteration, Cargo changes |
+| `rust-1-100` | Never type, stable Allocator, DropGuard, conjure_zst, Cargo cooldowns |
 | `rust-nightly` | Nightly feature gates, unstable std, -Z tooling, platforms |
 | `rust-async-conventions` | Futures, Send/Sync, join/select, streams, pinning, cancellation |
 | `rust-wasm-conventions` | wasm-bindgen, wasm-pack, JS interop, binary size |

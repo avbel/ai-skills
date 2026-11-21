@@ -64,6 +64,7 @@ For software that "must survive" (no patches, no failures):
 - **Reproducible builds** — commit **`Cargo.lock`** for anything that builds an executable so everyone builds identical dependency versions; add **`rust-toolchain.toml`** to pin the compiler version and target. `cargo update` deliberately, then `cargo test`.
 - **Pin/self-host critical deps** — git dependencies can lock to a `rev` (commit hash) and live in a private/self-hosted repo: `clap = { git = "…", rev = "31bd0b5" }`. Keep a known-good internal version while you vet upstream.
 - **Minimize and vet** the dependency graph — fewer, well-trusted deps; ban duplicate versions of security-critical crates (e.g. allowlist crypto publishers). Consider `cargo-vet`/`cargo-deny` to enforce policy.
+- **Dependency cooldowns** (Rust 1.100+, built into Cargo) — set `[registry] global-min-publish-age = "3 days"` in `.cargo/config.toml` so the resolver skips freshly published versions; most malicious releases are caught within that window. Complements `cargo-audit`, does not replace review. Details: `rust-1-100` skill, Cargo section.
 
 ## Recommended toolchain
 

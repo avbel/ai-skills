@@ -1,7 +1,7 @@
-# Performance-relevant Rust features by version (1.75 -> 1.101 nightly)
+# Performance-relevant Rust features by version (1.75 -> 1.102 nightly)
 
-Stable at research time: **1.99.1** (2026-10-15; LLVM 23). Beta 1.100 ships 2026-11-12; nightly is 1.101 (stable 2026-12-24). Six-week train: 1.90 (2025-09-18), 1.91 (10-30), 1.92 (12-11), 1.93 (2026-01-22), 1.94 (03-05), 1.95 (04-16), 1.96 (05-28), 1.97 (07-09), 1.98 (08-20), 1.99 (10-01).
-Primary source for every version number: https://github.com/rust-lang/rust/blob/master/RELEASES.md (also https://doc.rust-lang.org/stable/releases.html), cross-checked with release posts at `https://blog.rust-lang.org/YYYY/MM/DD/Rust-1.N.0/`. Beta/nightly items from https://releases.rs/.
+Stable at research time: **1.100.0** (2026-11-12; LLVM 23 since 1.99). Nightly is 1.102 (stable 2027-02-04). Six-week train: 1.90 (2025-09-18), 1.91 (10-30), 1.92 (12-11), 1.93 (2026-01-22), 1.94 (03-05), 1.95 (04-16), 1.96 (05-28), 1.97 (07-09), 1.98 (08-20), 1.99 (10-01), 1.100 (11-12).
+Primary source for every version number: https://github.com/rust-lang/rust/blob/master/RELEASES.md (also https://doc.rust-lang.org/stable/releases.html), cross-checked with release posts at `https://blog.rust-lang.org/YYYY/MM/DD/Rust-1.N.0/`. Beta/nightly items from https://releases.rs/. Full per-release feature write-ups with samples: `rust-1-99` and `rust-1-100` skills.
 
 ## Toolchain and build
 
@@ -24,6 +24,9 @@ Primary source for every version number: https://github.com/rust-lang/rust/blob/
 | Cargo: incremental off by default when `CI` env is set | 1.99 | no useless incremental overhead in CI |
 | Cargo built-in `debug` profile (same as `dev` for now) | 1.99 | groundwork for a lighter `dev` |
 | Rustdoc trait-impl filtering | 1.99 | ~20 % average, up to 40 % faster rustdoc |
+| `-Cprofile-sample-use` stable | 1.100 | sample-profile PGO (perf/oprofile-style profiles) without instrumentation |
+| Cargo `[lints.cargo]` with `cargo::unused_dependencies` | 1.100 | leaner dependency graphs = less to build |
+| Cargo `global-min-publish-age` cooldowns | 1.100 | supply chain, not perf per se; resolver skips fresh versions |
 
 ## Language and codegen controls
 
@@ -57,6 +60,10 @@ Primary source for every version number: https://github.com/rust-lang/rust/blob/
 | **`<int>::format_into` + `fmt::NumBuffer`** | **1.98** (std re-export 1.99) | integer formatting close to `itoa` without allocation |
 | NEON `vdot*` intrinsics | 1.98 | |
 | `RangeInclusive` iteration optimized | 1.99 | free; exhausted-range `start()/end()` behaviour changed |
+| Never type `!` stable everywhere; `Infallible` = alias of `!`; pre-2024 editions fall back to `!` | 1.100 | `Result<T, !>` zero-size, exhaustive matches elided |
+| `extern "custom"` | 1.100 | name fns whose ABI is defined by external tooling |
+| `Iterator::{min,max}(_by_key)` call `Ord::min`/`Ord::max` when overridden | 1.100 | faster for types that override; no change for correct `Ord` |
+| x86 "Rust" ABI uses SSE registers where always available | 1.100 | SIMD args in registers |
 | Removal of `Copy` specialization in std internals | 1.93 | possible regressions: some APIs now call `Clone::clone`; re-benchmark `to_vec`/`extend_from_slice` on `Copy` types |
 
 ## Std APIs that avoid allocation, bounds checks or copies
@@ -79,14 +86,14 @@ Primary source for every version number: https://github.com/rust-lang/rust/blob/
 | `BTreeMap::append` optimized, `From<T> for LazyLock`, `NonZero` range iteration | 1.96 |
 | `Atomic*::from_mut/get_mut_slice/from_mut_slice`, `str::substr_range`, `subslice_range`, `strip_circumfix`, `String::from_utf16le/be` | 1.98 |
 | `Vec::into_parts/from_parts`, `Box::into_non_null`, `String::from_utf8_lossy_owned`, `VecDeque::retain_back`, `LocalKey<Cell<T>>::update`, `IntoIterator for Box<[T; N]>` | 1.99 |
+| **`Allocator` trait stable for `Vec`/`Box`** (+ blanket impls for `&A`, `&mut A`, `Box<A>`, `Rc<A>`, `Arc<A>`), `mem::DropGuard`, `mem::conjure_zst` | **1.100** |
 
 ## Beta and nightly (do not depend on in stable products)
 
-| Item | Status 2026-11-08 | Why it matters |
+| Item | Status 2026-11-21 | Why it matters |
 |---|---|---|
-| **`Allocator` trait** stabilized (PR #156882), most `Box` impls generalized over `A` | **1.100 beta, stable 2026-11-12** | arena allocators for std collections; check the 1.100 notes for which `*_in` constructors are stable |
-| `!` never type, `bool::toggle`, `unsafe_cell_access`, SSE-register ABI for SIMD types, integer min/max intrinsics; `Iterator::min/max(_by_key)` use overridden `min`/`max` | 1.100 beta | `Result<T, !>` zero-cost; SIMD args in registers |
-| `slice_split_once`, `funnel_shifts`, `#[inline]` honoured on the generated `poll` of `async fn`, min external LLVM 22 | 1.101 nightly (stable 2026-12-24) | inlining control for async hot paths |
+| `bool::toggle`, `unsafe_cell_access`, integer min/max intrinsics | 1.101/1.102 nightly | did not make the 1.100 train; recheck before relying |
+| `slice_split_once`, `funnel_shifts`, `#[inline]` honoured on the generated `poll` of `async fn`, min external LLVM 22 | 1.101 beta (stable 2026-12-24) | inlining control for async hot paths |
 | `std::simd` (`portable_simd`, #86656) | nightly only | use `as_chunks` + safe `#[target_feature]` or stable SIMD crates instead |
 | `hint::likely` / `hint::unlikely` (`likely_unlikely`, #151619) | nightly only | use `cold_path` |
 | Explicit tail calls (`become`) and `loop_match` | unstable; 2026 project goal | guaranteed TCO for interpreters and state machines |
