@@ -21,6 +21,7 @@ Pick **one primary workflow** from the table, load that skill (the Skill tool in
 | E2E suite against a real stack; network-failure / resilience testing; SDK smoke tests | `dev-e2e-testing` |
 | Lesson worth keeping; "remember this"; task start in a repo with `docs/knowledge/` | `dev-knowledge` |
 | Writing or reviewing code; simplifying abstractions or comments | `dev-code-style` (supporting skill) |
+| Stuck after two evidence-backed attempts; "use advisor", "second opinion" | `dev-consult` (supporting skill) |
 
 Ambiguous between lite and coordinated feature work? Start with `dev-feature-lite`; escalate when code inspection finds sequencing or contract alignment across behavioral surfaces, a real design fork, a cross-cutting migration, or material risk. Ambiguous between a coordinated feature and problem-solving? Start with `dev-feature`; it escalates itself when it finds multiple viable architectures.
 

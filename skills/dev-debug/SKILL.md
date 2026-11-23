@@ -14,7 +14,7 @@ For bugs that survive the first obvious fix. The core discipline: **find the roo
 3. **Recent changes first:** `git log --oneline -20` on the touched files; if the bug is a regression, `git bisect run <failing-command>` finds the exact commit mechanically — prefer it over reading diffs when there are more than a handful of commits.
 4. **State the best evidence-backed, falsifiable hypothesis and test it.** List alternatives only when they change the next experiment; do not invent a quota of hypotheses. Each in the form "if X is the cause, changing Y will make the bug disappear" — state the hypothesis briefly before testing. Verify with evidence (a log line, an assertion, a minimized input) before changing any code.
 5. **Tag every debug log with one token** (`[DBG-4f2a]`) so cleanup after the hunt is a single grep — never log everything and grep the noise.
-6. **After 2 failed hypotheses, stop guessing** and move to Phase 2 — the bug is in your model of the system, not in the place you're looking.
+6. **After 2 failed hypotheses, stop guessing** — the bug is in your model of the system, not in the place you're looking. Consult per `dev-consult` with the evidence so far; if that does not resolve it, move to Phase 2. A `dev-loop` worker skips the consult (it may not spawn subagents; the controller consults) and returns BLOCKED with the evidence and the breakpoint locations Phase 2 would set. When the user said not to stop, Phase 2 has no one to drive the debugger: consult, then report BLOCKED with the evidence, the consult result, and those breakpoint locations.
 
 ## Phase 2 — Interactive Debugger (hard cases)
 

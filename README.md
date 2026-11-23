@@ -205,6 +205,7 @@ Cross-language workflow skills sharing one philosophy: cheapest sufficient proce
 | `dev-testing` | Contract-focused tests, real-engine fidelity, verified API mocks |
 | `dev-e2e-testing` | Production-parity e2e: real services, local chains, network-fault injection |
 | `dev-debug` | Root-cause debugging, debugger configs for IDEs and CLI |
+| `dev-consult` | Second opinion when stuck: fresh stronger context, capped |
 | `dev-knowledge` | Capture lessons in configured memory or linked project notes |
 | `dev-code-style` | Compact, readable code with justified abstractions and sparse, purposeful comments |
 
